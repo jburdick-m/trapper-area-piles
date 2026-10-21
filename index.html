@@ -51,6 +51,9 @@
   .bp-kpi .kl { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
   .bp-kpi .kv { font-family: var(--font-serif); font-size: var(--ui-font-size-title); font-weight: 400; font-variant-numeric: tabular-nums; }
   .bp-kpi .ks { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .bp-kpi .ka { font-size: var(--ui-font-size-body); font-variant-numeric: tabular-nums; border-top: 1px solid var(--color-border-line); padding-top: var(--ui-pad-xs); margin-top: auto; }
+  .bp-kpi .ka:empty { display: none; }
+  .bp-kpi .ka b { font-weight: var(--ui-font-weight-medium); }
   .bp-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem); gap: var(--ui-gap-md); align-items: start; }
   @media (max-width: 900px) { .bp-main { grid-template-columns: minmax(0, 1fr); } }
   .bp-maptools { display: flex; flex-wrap: wrap; gap: var(--ui-gap-sm) var(--ui-gap-md); margin: var(--ui-gap-md) 0 var(--ui-gap-sm); font-size: var(--ui-font-size-caption); align-items: center; }
@@ -112,12 +115,10 @@
   <div class="bp-kpis" id="kpis">
     <div class="bp-kpi"><span class="kl">Piles selected</span><span class="kv" id="k-piles">—</span><span class="ks" id="k-piles-s"></span></div>
     <div class="bp-kpi"><span class="kl">Dry tons</span><span class="kv" id="k-tons">—</span><span class="ks" id="k-tons-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span><span class="ka" id="k-gcost-all"></span></div>
+    <div class="bp-kpi"><span class="kl">Carbonator cost</span><span class="kv" id="k-ccost">—</span><span class="ks" id="k-ccost-s"></span><span class="ka" id="k-ccost-all"></span></div>
     <div class="bp-kpi"><span class="kl">Carbonator time</span><span class="kv" id="k-days">—</span><span class="ks" id="k-days-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Carbonator cost</span><span class="kv" id="k-ccost">—</span><span class="ks" id="k-ccost-s"></span></div>
     <div class="bp-kpi"><span class="kl">Biochar made</span><span class="kv" id="k-char">—</span><span class="ks" id="k-char-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Grind and haul, all project ground</span><span class="kv" id="k-gcost-all">—</span><span class="ks" id="k-gcost-all-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Carbonator, all project ground</span><span class="kv" id="k-ccost-all">—</span><span class="ks" id="k-ccost-all-s"></span></div>
   </div>
 
   <div class="bp-main">
@@ -558,10 +559,13 @@
       td(fmt0(all.T), 1), td(money(all.g), 1), td(money(all.c), 1));
     tb.append(tot);
     const addPct = a.T ? 100 * (all.T / a.T - 1) : 0;
-    $('#k-gcost-all').textContent = money(all.g);
-    $('#k-gcost-all-s').textContent = `${fmt0(all.T)} dry t · flown piles + ${fmt0(addPct)}% for unflown unit ground`;
-    $('#k-ccost-all').textContent = money(all.c);
-    $('#k-ccost-all-s').textContent = `${fmt0(all.T)} dry t · flown piles + ${fmt0(addPct)}% for unflown unit ground`;
+    const allLine = (el, v) => {
+      const b = document.createElement('b');
+      b.textContent = money(v);
+      el.replaceChildren('All project ground: ', b, ` (+${fmt0(addPct)}% unflown, ${fmt0(all.T)} dry t)`);
+    };
+    allLine($('#k-gcost-all'), all.g);
+    allLine($('#k-ccost-all'), all.c);
 
     legend();
     stylePiles();
@@ -589,7 +593,7 @@
   let lastW = 0;
   const render = () => {
     if (!prep()) {
-      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char', '#k-gcost-all', '#k-ccost-all'].forEach((s) => { $(s).textContent = '—'; });
+      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char'].forEach((s) => { $(s).textContent = '—'; });
       return;
     }
     if (!S.built) buildControls();
