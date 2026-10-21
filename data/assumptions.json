@@ -1,0 +1,162 @@
+[
+ {
+  "key": "packing_ratio",
+  "label": "Packing ratio",
+  "default": 0.2,
+  "min": 0.06,
+  "max": 0.3,
+  "step": 0.01,
+  "unit": "",
+  "source": "Hardy 1996 PNW-GTR-364: machine piles 0.06-0.26; 0.20 short-needle conifer default, 0.25 compacted loader piles"
+ },
+ {
+  "key": "wood_density",
+  "label": "Wood density (dry)",
+  "default": 380,
+  "min": 300,
+  "max": 500,
+  "step": 10,
+  "unit": "kg/m3",
+  "source": "Sierra mixed conifer specific gravity ~0.34-0.45"
+ },
+ {
+  "key": "vol_adjust",
+  "label": "Lidar volume adjustment",
+  "default": 0,
+  "min": -30,
+  "max": 30,
+  "step": 5,
+  "unit": "%",
+  "source": "Judgement: ~+/-10-15% from 1.2 pts/m2 sampling and toe cutoff"
+ },
+ {
+  "key": "carb_rate",
+  "label": "Carbonator rate",
+  "default": 7,
+  "min": 3,
+  "max": 20,
+  "step": 0.5,
+  "unit": "dry t/run-h",
+  "source": "Siskiyou 2020 demo 4.7; Earth Foundries 6050 10-15 green t/h (~6-10 dry); 6040 15-20+ t/h"
+ },
+ {
+  "key": "carb_hours",
+  "label": "Productive hours per day",
+  "default": 7,
+  "min": 4,
+  "max": 10,
+  "step": 0.5,
+  "unit": "h/day",
+  "source": "Assumed: 10 h shift less warm-up, quench, moves, service"
+ },
+ {
+  "key": "carb_units",
+  "label": "Carbonators working",
+  "default": 1,
+  "min": 1,
+  "max": 4,
+  "step": 1,
+  "unit": "machines",
+  "source": "Mendocino NF ran three 6040s on one project"
+ },
+ {
+  "key": "carb_cost",
+  "label": "Carbonator contract rate",
+  "default": 1225,
+  "min": 600,
+  "max": 2000,
+  "step": 25,
+  "unit": "$/run-h",
+  "source": "Siskiyou $847/h all-in 2020-21, + inflation and margin -> ~$1,150-1,300"
+ },
+ {
+  "key": "carb_mob",
+  "label": "Carbonator move-in per project",
+  "default": 15000,
+  "min": 0,
+  "max": 50000,
+  "step": 1000,
+  "unit": "$",
+  "source": "Assumed: lowboy moves for carbonator + loader, water tender"
+ },
+ {
+  "key": "biochar_yield",
+  "label": "Biochar yield",
+  "default": 13,
+  "min": 8,
+  "max": 20,
+  "step": 1,
+  "unit": "% of dry input",
+  "source": "Siskiyou 2020 demo: 46.7 t biochar from 373 BDT"
+ },
+ {
+  "key": "grind_cost",
+  "label": "Grind and load",
+  "default": 58,
+  "min": 30,
+  "max": 100,
+  "step": 1,
+  "unit": "$/dry t",
+  "source": "Central Sierra feedstock report 2023: $50-65/BDT"
+ },
+ {
+  "key": "haul_miles",
+  "label": "Haul distance one-way",
+  "default": 80,
+  "min": 10,
+  "max": 160,
+  "step": 5,
+  "unit": "mi",
+  "source": "Destination not set; 80 mi matches the 2023 report example"
+ },
+ {
+  "key": "truck_rate",
+  "label": "Chip van rate",
+  "default": 140,
+  "min": 100,
+  "max": 200,
+  "step": 5,
+  "unit": "$/h",
+  "source": "Central Sierra 2023: $130-150/h"
+ },
+ {
+  "key": "load_bdt",
+  "label": "Load size",
+  "default": 13,
+  "min": 8,
+  "max": 18,
+  "step": 0.5,
+  "unit": "dry t/load",
+  "source": "Assumed: ~25 field t at ~half moisture"
+ },
+ {
+  "key": "haul_speed",
+  "label": "Average haul speed",
+  "default": 45,
+  "min": 25,
+  "max": 55,
+  "step": 1,
+  "unit": "mph",
+  "source": "Calibrated: 80 mi one-way = 4.5 h round trip incl. 1 h load/unload"
+ },
+ {
+  "key": "markup",
+  "label": "Contractor overhead and profit",
+  "default": 20,
+  "min": 0,
+  "max": 40,
+  "step": 5,
+  "unit": "%",
+  "source": "Applied to grind and haul (cost basis); carbonator rate already includes it"
+ },
+ {
+  "key": "season_days",
+  "label": "Working days per season",
+  "default": 120,
+  "min": 40,
+  "max": 200,
+  "step": 5,
+  "unit": "days",
+  "source": "Assumed operating window per field season"
+ }
+]

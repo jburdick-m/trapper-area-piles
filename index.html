@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pike Area Burn Piles</title>
+<meta name="description" content="Burn piles mapped from 2026 ASO lidar in the Pike-Magnus, Graveyard, Sleighville and Alaska Peak units, Tahoe National Forest, with disposal scenarios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400&display=swap">
+<style>
+  :root {
+    --font-sans: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --color-bg: #f4f2ee; --color-panel: #ffffff; --color-fg: #1f2421; --color-fg-muted: #5d665f;
+    --color-border-line: #dcd8cf; --color-warn: #9a6a00; --color-bad: #b3261e;
+    --ui-surface-popover: #ffffff; --ui-border: #cfcac0; --ui-shadow-popover: 0 4px 14px rgba(0, 0, 0, .12);
+    --ui-text-secondary: #5d665f; --ui-chart-muted: #9aa09a; --ui-chart-axis: #8c918b;
+    --ui-chart-status-good: #2e7d4f; --ui-chart-status-serious: #d2691e; --ui-chart-status-warning: #c99a06;
+    --ui-gap-xs: 4px; --ui-gap-sm: 8px; --ui-gap-md: 14px; --ui-gap-lg: 22px;
+    --ui-pad-xs: 4px; --ui-pad-sm: 8px; --ui-pad-md: 12px; --ui-pad-lg: 18px; --ui-radius: 8px;
+    --ui-font-size-caption: 0.8rem; --ui-font-size-body: 0.95rem; --ui-font-size-heading: 1.1rem;
+    --ui-font-size-title: 1.9rem; --ui-font-weight-medium: 600; --ui-dur-slow: 300ms;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #151917; --color-panel: #1e2421; --color-fg: #e7ebe8; --color-fg-muted: #a3aca6;
+      --color-border-line: #333b37; --color-warn: #e0b040; --color-bad: #ef8a80;
+      --ui-surface-popover: #252c29; --ui-border: #3d4642; --ui-shadow-popover: 0 4px 14px rgba(0, 0, 0, .5);
+      --ui-text-secondary: #a3aca6; --ui-chart-muted: #6f7772; --ui-chart-axis: #7d857f;
+      --ui-chart-status-good: #5fb47f; --ui-chart-status-serious: #e8833a; --ui-chart-status-warning: #e2b93b;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); font-size: 15px; }
+  .page { max-width: 1400px; margin: 0 auto; padding-block: 24px 40px;
+          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bp-err { color: var(--color-bad); margin: 8px 0 0; }
+
+  .bp { display: flex; flex-direction: column; gap: var(--ui-gap-lg); font-family: var(--font-sans); }
+  .bp h1 { font-family: var(--font-serif); font-weight: 400; font-size: var(--ui-font-size-title); margin: 0; text-wrap: balance; }
+  .bp h2 { font-size: var(--ui-font-size-heading); font-weight: var(--ui-font-weight-medium); margin: 0; }
+  .bp h3 { font-size: var(--ui-font-size-body); font-weight: var(--ui-font-weight-medium); margin: 0; }
+  .bp-take { margin: var(--ui-gap-xs) 0 0; color: var(--color-fg-muted); max-width: 70ch; }
+  .bp-note { margin: var(--ui-gap-xs) 0 0; color: var(--color-fg-muted); font-size: var(--ui-font-size-caption); }
+  .bp-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); padding: var(--ui-pad-lg); min-width: 0; }
+  .bp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: var(--ui-gap-md); }
+  .bp-kpi { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); padding: var(--ui-pad-md); display: flex; flex-direction: column; gap: var(--ui-gap-xs); }
+  .bp-kpi .kl { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
+  .bp-kpi .kv { font-family: var(--font-serif); font-size: var(--ui-font-size-title); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .bp-kpi .ks { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .bp-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem); gap: var(--ui-gap-md); align-items: start; }
+  @media (max-width: 900px) { .bp-main { grid-template-columns: minmax(0, 1fr); } }
+  .bp-maptools { display: flex; flex-wrap: wrap; gap: var(--ui-gap-sm) var(--ui-gap-md); margin: var(--ui-gap-md) 0 var(--ui-gap-sm); font-size: var(--ui-font-size-caption); align-items: center; }
+  .bp-maptools label { display: inline-flex; gap: var(--ui-gap-xs); align-items: center; cursor: pointer; }
+  .bp-maptools select { font: inherit; }
+  .bp-mapwrap { position: relative; border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); overflow: hidden; background: var(--color-bg); min-height: 20rem; }
+  .bp-mapwrap svg { display: block; width: 100%; cursor: grab; touch-action: none; }
+  .bp-mapwrap svg:active { cursor: grabbing; }
+  .bp-mapwrap path, .bp-mapwrap circle { vector-effect: non-scaling-stroke; }
+  .bp-zoom { position: absolute; top: var(--ui-pad-sm); right: var(--ui-pad-sm); display: flex; flex-direction: column; gap: 2px; }
+  .bp-zoom button, .bp-btn { font: inherit; font-size: var(--ui-font-size-caption); background: var(--ui-surface-popover); color: var(--color-fg); border: 1px solid var(--ui-border); border-radius: var(--ui-radius); padding: 2px var(--ui-pad-sm); cursor: pointer; min-width: 2rem; }
+  .bp-zoom button:focus-visible, .bp-btn:focus-visible, .bp input:focus-visible, .bp tr:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 1px; }
+  .bp-tip { position: absolute; pointer-events: none; background: var(--ui-surface-popover); border: 1px solid var(--ui-border); border-radius: var(--ui-radius); box-shadow: var(--ui-shadow-popover); padding: var(--ui-pad-xs) var(--ui-pad-sm); font-size: var(--ui-font-size-caption); max-width: 17rem; z-index: 2; }
+  .bp-tip .t1 { color: var(--ui-text-secondary); }
+  .bp-tip div { font-variant-numeric: tabular-nums; }
+  .bp-legend { display: flex; flex-wrap: wrap; gap: var(--ui-gap-xs) var(--ui-gap-md); margin-top: var(--ui-gap-sm); font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
+  .bp-legend span { display: inline-flex; align-items: center; gap: var(--ui-gap-xs); }
+  .bp-sw { width: 0.8rem; height: 0.8rem; border-radius: 50%; display: inline-block; }
+  .bp-sq { width: 0.9rem; height: 0.7rem; display: inline-block; border: 2px solid; }
+  .bp-pick { margin-top: var(--ui-gap-md); padding: var(--ui-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); font-size: var(--ui-font-size-caption); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--ui-gap-xs) var(--ui-gap-md); font-variant-numeric: tabular-nums; }
+  .bp-pick b { font-weight: var(--ui-font-weight-medium); }
+  .bp-pick .ph { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--ui-gap-sm); align-items: center; }
+  .bp-controls { display: flex; flex-direction: column; gap: var(--ui-gap-md); }
+  .bp-group { display: flex; flex-direction: column; gap: var(--ui-gap-sm); border-top: 1px solid var(--color-border-line); padding-top: var(--ui-pad-md); }
+  .bp-group:first-of-type { border-top: 0; padding-top: 0; }
+  .bp-sl { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--ui-gap-sm); font-size: var(--ui-font-size-caption); }
+  .bp-sl label { color: var(--color-fg); }
+  .bp-sl output { font-variant-numeric: tabular-nums; color: var(--color-fg); text-align: right; }
+  .bp-sl input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--color-fg); }
+  .bp-checks { display: flex; flex-direction: column; gap: var(--ui-gap-xs); font-size: var(--ui-font-size-caption); }
+  .bp-checks label { display: flex; gap: var(--ui-gap-xs); align-items: center; cursor: pointer; }
+  .bp details { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
+  .bp details summary { cursor: pointer; }
+  .bp details ul { margin: var(--ui-gap-xs) 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 2px; }
+  .bp-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--ui-gap-md); }
+  .bp-scroll { overflow: auto; max-height: 24rem; margin-top: var(--ui-gap-md); }
+  .bp-scroll.wide { max-height: none; }
+  .bp-table { border-collapse: collapse; width: 100%; font-size: var(--ui-font-size-caption); font-variant-numeric: tabular-nums; }
+  .bp-table th { text-align: left; font-weight: var(--ui-font-weight-medium); color: var(--color-fg-muted); padding: var(--ui-pad-xs) var(--ui-pad-sm); border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); white-space: nowrap; }
+  .bp-table td { padding: var(--ui-pad-xs) var(--ui-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+  .bp-table td.n, .bp-table th.n { text-align: right; }
+  .bp-table tbody tr[data-key] { cursor: pointer; }
+  .bp-table tbody tr[data-key]:hover { background: var(--color-bg); }
+  .bp-table tr.tot td { font-weight: var(--ui-font-weight-medium); border-bottom: 0; }
+  .bp-chip { display: inline-block; padding: 0 var(--ui-pad-xs); border-radius: var(--ui-radius); font-size: var(--ui-font-size-caption); border: 1px solid var(--color-border-line); }
+  .bp-chip.warn { color: var(--color-warn); }
+  .bp-chip.bad { color: var(--color-bad); }
+  .bp-foot { color: var(--color-fg-muted); font-size: var(--ui-font-size-caption); margin: 0; max-width: 90ch; }
+</style>
+</head>
+<body>
+<div class="page">
+<div class="bp" id="burn-piles">
+  <header>
+    <h1 id="title">Pike area burn piles</h1>
+    <p class="bp-err" id="load-error" hidden></p>
+  </header>
+
+  <div class="bp-kpis" id="kpis">
+    <div class="bp-kpi"><span class="kl">Piles selected</span><span class="kv" id="k-piles">—</span><span class="ks" id="k-piles-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Dry tons</span><span class="kv" id="k-tons">—</span><span class="ks" id="k-tons-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Carbonator time</span><span class="kv" id="k-days">—</span><span class="ks" id="k-days-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Carbonator cost</span><span class="kv" id="k-ccost">—</span><span class="ks" id="k-ccost-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Biochar made</span><span class="kv" id="k-char">—</span><span class="ks" id="k-char-s"></span></div>
+  </div>
+
+  <div class="bp-main">
+    <section class="bp-card" id="map-card">
+      <h2>Piles, projects and lidar coverage</h2>
+      <div class="bp-maptools" id="map-tools">
+        <label><input type="checkbox" id="lyr-hs" checked> Hillshade</label>
+        <label><input type="checkbox" id="lyr-fs" checked> Forest Service land</label>
+        <label><input type="checkbox" id="lyr-cov" checked> No-lidar shading</label>
+        <label><input type="checkbox" id="lyr-units" checked> Units</label>
+        <label><input type="checkbox" id="lyr-proj" checked> Project boundaries</label>
+        <label>Color piles by
+          <select id="color-by" aria-label="Color piles by">
+            <option value="project">project</option>
+            <option value="basis">detection basis</option>
+          </select>
+        </label>
+      </div>
+      <div class="bp-mapwrap" id="mapwrap">
+        <svg id="map" role="img" aria-label="Map of burn piles, treatment units and lidar coverage"></svg>
+        <div class="bp-zoom">
+          <button type="button" id="z-in" aria-label="Zoom in">+</button>
+          <button type="button" id="z-out" aria-label="Zoom out">−</button>
+          <button type="button" id="z-fit" aria-label="Zoom to full extent">Fit</button>
+        </div>
+        <div class="bp-tip" id="tip" hidden></div>
+      </div>
+      <div class="bp-legend" id="legend"></div>
+      <div class="bp-pick" id="pick" hidden></div>
+    </section>
+
+    <aside class="bp-card bp-controls" id="controls">
+      <h2>Scenario</h2>
+      <div class="bp-group" id="g-filter">
+        <h3>Which piles</h3>
+        <div class="bp-checks" id="proj-checks"></div>
+        <div class="bp-checks">
+          <label><input type="checkbox" id="f-open" checked> Include piles on ground open in 2022</label>
+        </div>
+        <div class="bp-sl">
+          <label for="f-mindiam">Smallest pile counted</label><output id="o-mindiam" for="f-mindiam">40 ft</output>
+          <input type="range" id="f-mindiam" min="40" max="120" step="5" value="40">
+        </div>
+      </div>
+      <div class="bp-group" id="g-tons"></div>
+      <div class="bp-group" id="g-carb"></div>
+      <div class="bp-group" id="g-haul"></div>
+      <button type="button" class="bp-btn" id="reset">Reset to defaults</button>
+    </aside>
+  </div>
+
+  <section class="bp-card" id="by-project">
+    <h2>By project</h2>
+    <div class="bp-scroll wide">
+      <table class="bp-table" id="proj-table">
+        <thead><tr><th>Project</th><th class="n">Piles</th><th class="n">Unit acres in extent</th><th class="n">With lidar</th><th class="n">Dry tons</th><th class="n">Carbonator days</th><th class="n">Carbonator cost</th><th class="n">Grind and haul</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+(() => {
+  const DATA = {};
+  const COLORS = ['#2f6c9e', '#c46a2b', '#4f8a3c', '#8b4f9f', '#b8475a', '#3a8f8a', '#7a6a2e', '#5b5f97'];
+  const $ = (s) => document.querySelector(s);
+  const KG_PER_TON = 907.185;
+  const fmt0 = d3.format(',.0f');
+  const fmt1 = d3.format(',.1f');
+  const money = (v) => (v >= 1e6 ? '$' + (v / 1e6).toFixed(v >= 1e7 ? 1 : 2) + 'M' : '$' + fmt0(Math.round(v / 1e3)) + 'k');
+  const parseG = (g) => (typeof g === 'string' ? JSON.parse(g) : g || []);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const OUTSIDE = 'outside units';
+
+  const S = { p: {}, defaults: {}, built: false, projects: new Set(), open: true, minDiam: 40, colorBy: 'project',
+              t: d3.zoomIdentity, picked: null, show: { hs: true, fs: true, cov: true, units: true, proj: true } };
+  let P = null, U = null, L = null, A = null, geo = null, zoom = null, projList = [], colorOf = {};
+
+  function prep() {
+    if (!DATA.piles) return false;
+    const dp = { data: DATA.piles }, du = { data: DATA.units }, dl = { data: DATA.layers }, da = { data: DATA.assumptions };
+    if (!P || P.src !== dp.data) {
+      P = dp.data.map((r) => ({ r, id: Number(r.pile_id), project: r.project, unit: r.unit || '', basis: r.basis,
+        diam: Number(r.diam_ft), hmax: Number(r.hmax_ft), vol: Number(r.vol_m3), area: Number(r.area_m2),
+        ci: Number(r.ci95_pct), vlo: Number(r.vol_lo95), vhi: Number(r.vol_hi95),
+        x: Number(r.x), y: Number(r.y), g: parseG(r.geom), tons: 0 }));
+      P.src = dp.data;
+      P.sort((a, b) => b.vol - a.vol);
+    }
+    if (!U || U.src !== du.data) {
+      U = du.data.map((r) => ({ r, uid: Number(r.uid), project: r.project, unit: r.unit || '', acres: Number(r.acres),
+        inview: Number(r.pct_in_view), lidar: Number(r.pct_lidar), g: parseG(r.geom) }));
+      U.src = du.data;
+    }
+    if (!L || L.src !== dl.data) {
+      L = dl.data.map((r) => ({ kind: r.kind, name: r.name, acres: Number(r.acres), g: parseG(r.geom) }));
+      L.src = dl.data;
+    }
+    if (!A || A.src !== da.data) {
+      A = da.data.map((r) => ({ key: r.key, label: r.label, def: Number(r.default), min: Number(r.min), max: Number(r.max),
+        step: Number(r.step), unit: r.unit || '', source: r.source || '' }));
+      A.src = da.data;
+    }
+    projList = [];
+    U.forEach((u) => { if (!projList.includes(u.project)) projList.push(u.project); });
+    P.forEach((d) => { if (!projList.includes(d.project)) projList.push(d.project); });
+    projList.sort((a, b) => (a === OUTSIDE) - (b === OUTSIDE));
+    colorOf = {};
+    projList.forEach((p, i) => { colorOf[p] = p === OUTSIDE ? 'var(--ui-chart-muted)' : COLORS[i % COLORS.length]; });
+    return true;
+  }
+
+  // ---------------------------------------------------------------- controls
+  const GROUPS = [
+    ['g-tons', 'Pile tonnage', ['packing_ratio', 'wood_density', 'vol_adjust']],
+    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield', 'season_days']],
+    ['g-haul', 'Grind and haul', ['grind_cost', 'haul_miles', 'truck_rate', 'load_bdt', 'haul_speed', 'markup']],
+  ];
+  const showVal = (a, v) => {
+    if (a.unit === '$/run-h' || a.unit === '$/h' || a.unit === '$/dry t') return '$' + fmt0(v) + ' ' + a.unit.slice(2);
+    if (a.unit === '$') return '$' + fmt0(v);
+    const s = a.step < 1 ? d3.format(a.step < 0.1 ? '.2f' : '.1f')(v) : fmt0(v);
+    return (a.key === 'vol_adjust' && v > 0 ? '+' : '') + s + (a.unit ? ' ' + a.unit : '');
+  };
+
+  function buildControls() {
+    A.forEach((a) => { S.defaults[a.key] = a.def; if (!(a.key in S.p)) S.p[a.key] = a.def; });
+    GROUPS.forEach(([id, title, keys]) => {
+      const box = document.getElementById(id);
+      box.replaceChildren();
+      const h = document.createElement('h3');
+      h.textContent = title;
+      box.append(h);
+      const src = document.createElement('details');
+      const sum = document.createElement('summary');
+      sum.textContent = 'Where the defaults come from';
+      const ul = document.createElement('ul');
+      keys.forEach((k) => {
+        const a = A.find((x) => x.key === k);
+        if (!a) return;
+        const row = document.createElement('div');
+        row.className = 'bp-sl';
+        const lab = document.createElement('label');
+        lab.htmlFor = 's-' + k;
+        lab.textContent = a.label;
+        const out = document.createElement('output');
+        out.id = 'o-' + k;
+        out.htmlFor = 's-' + k;
+        const inp = document.createElement('input');
+        inp.type = 'range';
+        inp.id = 's-' + k;
+        inp.min = a.min; inp.max = a.max; inp.step = a.step; inp.value = S.p[k];
+        inp.addEventListener('input', () => { S.p[k] = Number(inp.value); out.textContent = showVal(a, S.p[k]); update(); });
+        out.textContent = showVal(a, S.p[k]);
+        row.append(lab, out, inp);
+        box.append(row);
+        const li = document.createElement('li');
+        li.textContent = a.label + ': ' + a.source;
+        ul.append(li);
+      });
+      src.append(sum, ul);
+      box.append(src);
+    });
+    const pc = $('#proj-checks');
+    pc.replaceChildren();
+    projList.forEach((p) => {
+      S.projects.add(p);
+      const lab = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true;
+      cb.id = 'p-' + projList.indexOf(p);
+      cb.addEventListener('change', () => { cb.checked ? S.projects.add(p) : S.projects.delete(p); update(); });
+      const sw = document.createElement('span');
+      sw.className = 'bp-sw';
+      sw.style.background = colorOf[p];
+      const t = document.createElement('span');
+      t.textContent = p === OUTSIDE ? 'Outside the four unit layers' : p;
+      lab.append(cb, sw, t);
+      pc.append(lab);
+    });
+    S.built = true;
+  }
+
+  $('#f-open').addEventListener('change', (e) => { S.open = e.target.checked; update(); });
+  $('#f-mindiam').addEventListener('input', (e) => { S.minDiam = Number(e.target.value); $('#o-mindiam').textContent = S.minDiam + ' ft'; update(); });
+  $('#color-by').addEventListener('change', (e) => { S.colorBy = e.target.value; update(); });
+  $('#reset').addEventListener('click', () => {
+    Object.assign(S.p, S.defaults);
+    A.forEach((a) => { const i = document.getElementById('s-' + a.key); if (i) i.value = a.def; const o = document.getElementById('o-' + a.key); if (o) o.textContent = showVal(a, a.def); });
+    S.open = true; $('#f-open').checked = true;
+    S.minDiam = 40; $('#f-mindiam').value = 40; $('#o-mindiam').textContent = '40 ft';
+    projList.forEach((p, i) => { S.projects.add(p); const c = document.getElementById('p-' + i); if (c) c.checked = true; });
+    update();
+  });
+  [['lyr-hs', 'hs'], ['lyr-fs', 'fs'], ['lyr-cov', 'cov'], ['lyr-units', 'units'], ['lyr-proj', 'proj']].forEach(([id, k]) => {
+    document.getElementById(id).addEventListener('change', (e) => { S.show[k] = e.target.checked; applyLayers(); });
+  });
+
+  // ---------------------------------------------------------------- scenario maths
+  function scenario() {
+    const p = S.p;
+    const f = (1 + p.vol_adjust / 100) * p.wood_density / KG_PER_TON;
+    P.forEach((d) => { d.tons = d.vol * f * p.packing_ratio; d.sel = S.projects.has(d.project) && (S.open || d.basis !== 'open_2022') && d.diam >= S.minDiam; });
+    const haulPerTon = p.truck_rate * (2 * p.haul_miles / p.haul_speed + 1) / p.load_bdt;
+    const ghPerTon = (p.grind_cost + haulPerTon) * (1 + p.markup / 100);
+    const calc = (rows) => {
+      const T = d3.sum(rows, (d) => d.tons);
+      const runh = T / p.carb_rate;
+      const days = runh / p.carb_hours / p.carb_units;
+      const nproj = new Set(rows.map((d) => d.project)).size;
+      const ccost = runh * p.carb_cost + (rows.length ? p.carb_mob * p.carb_units * nproj : 0);
+      return { n: rows.length, T, lo: T * 0.15 / p.packing_ratio, hi: T * 0.25 / p.packing_ratio, runh, days,
+               seasons: days / p.season_days, ccost, gcost: T * ghPerTon, loads: T / p.load_bdt, char: T * p.biochar_yield / 100 };
+    };
+    const sel = P.filter((d) => d.sel);
+    return { all: calc(sel), byProject: projList.map((pr) => ({ project: pr, ...calc(sel.filter((d) => d.project === pr)) })), haulPerTon, ghPerTon };
+  }
+
+  // ---------------------------------------------------------------- map
+  const ringsPath = (rings, px, py) => rings.map((r) => 'M' + r.map(([x, y]) => px(x).toFixed(1) + ',' + py(y).toFixed(1)).join('L') + 'Z').join('');
+  const radius = (t) => Math.max(2.5, Math.min(15, Math.sqrt(Math.max(t, 0)) * 0.22));
+  const pileColor = (d) => (S.colorBy === 'basis' ? (d.basis === 'open_2022' ? 'var(--ui-chart-status-warning)' : COLORS[0]) : colorOf[d.project]);
+
+  function drawMap() {
+    const wrap = $('#mapwrap');
+    const W = wrap.clientWidth;
+    if (!W) return;
+    const ext = L.find((d) => d.kind === 'extent');
+    const xs = ext.g[0].map((c) => c[0]), ys = ext.g[0].map((c) => c[1]);
+    const X0 = d3.min(xs), X1 = d3.max(xs), Y0 = d3.min(ys), Y1 = d3.max(ys);
+    const H = Math.round(Math.max(320, Math.min(W * (Y1 - Y0) / (X1 - X0), 760)));
+    const s = Math.min(W / (X1 - X0), H / (Y1 - Y0));
+    const ox = (W - (X1 - X0) * s) / 2, oy = (H - (Y1 - Y0) * s) / 2;
+    const px = (x) => ox + (x - X0) * s, py = (y) => oy + (Y1 - y) * s;
+    geo = { W, H, s, px, py };
+    const svg = d3.select('#map').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    svg.selectAll('*').remove();
+    const root = svg.append('g').attr('class', 'root');
+    const hs = DATA.hillshade;
+    if (hs) {
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url).attr('x', px(hs.x0)).attr('y', py(hs.y1))
+        .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
+    }
+    const fs = L.find((d) => d.kind === 'fsland');
+    if (fs) root.append('path').attr('class', 'lyr-fs').attr('d', ringsPath(fs.g, px, py)).attr('fill-rule', 'evenodd')
+      .attr('fill', 'var(--ui-chart-status-good)').attr('fill-opacity', 0.10).attr('stroke', 'var(--ui-chart-status-good)').attr('stroke-opacity', 0.6).attr('stroke-width', 0.8);
+    const cov = L.find((d) => d.kind === 'lidar');
+    if (cov) root.append('path').attr('class', 'lyr-cov').attr('d', ringsPath(ext.g, px, py) + ringsPath(cov.g, px, py)).attr('fill-rule', 'evenodd')
+      .attr('fill', 'var(--color-fg)').attr('fill-opacity', 0.16).attr('stroke', 'none');
+    root.append('path').attr('d', ringsPath(ext.g, px, py)).attr('fill', 'none').attr('stroke', 'var(--ui-chart-axis)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1);
+    root.append('g').attr('class', 'lyr-units').selectAll('path').data(U).join('path')
+      .attr('d', (u) => ringsPath(u.g, px, py)).attr('fill-rule', 'evenodd')
+      .attr('fill', 'var(--ui-chart-status-serious)').attr('fill-opacity', (u) => 0.5 * (1 - u.lidar / 100))
+      .attr('stroke', (u) => colorOf[u.project]).attr('stroke-width', 0.7).attr('stroke-opacity', 0.9)
+      .on('mousemove', (ev, u) => tipUnit(ev, u)).on('mouseleave', hideTip);
+    root.append('g').attr('class', 'lyr-proj').selectAll('path').data(L.filter((d) => d.kind === 'project')).join('path')
+      .attr('d', (d) => ringsPath(d.g, px, py)).attr('fill', 'none').attr('stroke', (d) => colorOf[d.name]).attr('stroke-width', 2.4).style('pointer-events', 'none');
+    root.append('g').attr('class', 'fp').selectAll('path').data(P, (d) => d.id).join('path')
+      .attr('d', (d) => ringsPath(d.g, px, py)).attr('fill-rule', 'evenodd').attr('stroke-width', 1.2)
+      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d, true));
+    root.append('g').attr('class', 'pts').selectAll('circle').data(P, (d) => d.id).join('circle')
+      .attr('cx', (d) => px(d.x)).attr('cy', (d) => py(d.y)).attr('stroke', 'var(--color-bg)').attr('stroke-width', 0.8)
+      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d, true));
+    root.append('circle').attr('class', 'pickring').attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2).attr('r', 0);
+    svg.append('g').attr('class', 'scalebar');
+    zoom = d3.zoom().scaleExtent([0.6, 400]).on('zoom', (e) => { S.t = e.transform; applyZoom(); });
+    svg.call(zoom).on('dblclick.zoom', null);
+    svg.call(zoom.transform, S.t);
+    applyLayers();
+  }
+
+  function applyZoom() {
+    if (!geo) return;
+    const k = S.t.k;
+    const svg = d3.select('#map');
+    svg.select('g.root').attr('transform', S.t);
+    // footprints fade in as a 20 m pile reaches ~8 px; dots shrink to markers once footprints are clear
+    const fpOn = Math.max(0, Math.min(1, (k - 2.5) / 3));
+    svg.selectAll('g.fp path').attr('fill-opacity', 0.55 * fpOn).attr('stroke-opacity', fpOn).style('display', fpOn > 0 ? null : 'none');
+    svg.selectAll('g.pts circle').attr('r', (d) => (fpOn >= 1 ? 2.2 : radius(d.tons)) / k)
+      .attr('fill-opacity', fpOn >= 1 ? 0.9 : 0.85).attr('stroke-width', 0.8);
+    if (S.picked) svg.select('.pickring').attr('cx', geo.px(S.picked.x)).attr('cy', geo.py(S.picked.y)).attr('r', (radius(S.picked.tons) + 5) / k);
+    const mPerPx = 1 / (geo.s * k);
+    const target = mPerPx * 100;
+    const nice = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find((v) => v >= target * 0.6) || 5000;
+    const wpx = nice / mPerPx;
+    const sb = svg.select('g.scalebar').attr('transform', `translate(12,${geo.H - 16})`);
+    sb.selectAll('*').remove();
+    sb.append('rect').attr('x', -4).attr('y', -16).attr('width', wpx + 8).attr('height', 22).attr('rx', 3).attr('fill', 'var(--color-panel)').attr('fill-opacity', 0.85);
+    sb.append('line').attr('x1', 0).attr('x2', wpx).attr('y1', 0).attr('y2', 0).attr('stroke', 'var(--color-fg)').attr('stroke-width', 2);
+    sb.append('text').attr('x', 0).attr('y', -5).attr('fill', 'var(--color-fg)').attr('font-size', 11)
+      .text(nice >= 1000 ? nice / 1000 + ' km' : nice + ' m');
+  }
+
+  function applyLayers() {
+    const svg = d3.select('#map');
+    svg.selectAll('.lyr-hs').style('display', S.show.hs ? null : 'none');
+    svg.selectAll('.lyr-fs').style('display', S.show.fs ? null : 'none');
+    svg.selectAll('.lyr-cov').style('display', S.show.cov ? null : 'none');
+    svg.selectAll('.lyr-units').style('display', S.show.units ? null : 'none');
+    svg.selectAll('.lyr-proj').style('display', S.show.proj ? null : 'none');
+  }
+
+  function stylePiles() {
+    const svg = d3.select('#map');
+    svg.selectAll('g.pts circle').attr('fill', pileColor).style('display', (d) => (d.sel ? null : 'none'));
+    svg.selectAll('g.fp path').attr('fill', pileColor).attr('stroke', pileColor).style('visibility', (d) => (d.sel ? null : 'hidden'));
+    applyZoom();
+  }
+
+  function zoomToBox(x0, y0, x1, y1, maxK) {
+    if (!geo || !zoom) return;
+    const { W, H, px, py } = geo;
+    const bw = Math.max(1, px(x1) - px(x0)), bh = Math.max(1, py(y0) - py(y1));
+    const k = Math.min(maxK || 400, 0.8 * Math.min(W / bw, H / bh));
+    const cx = (px(x0) + px(x1)) / 2, cy = (py(y0) + py(y1)) / 2;
+    const t = d3.zoomIdentity.translate(W / 2, H / 2).scale(k).translate(-cx, -cy);
+    d3.select('#map').transition().duration(reduceMotion ? 0 : 650).call(zoom.transform, t);
+  }
+
+  const bbox = (rings) => {
+    const all = rings.flat();
+    return [d3.min(all, (c) => c[0]), d3.min(all, (c) => c[1]), d3.max(all, (c) => c[0]), d3.max(all, (c) => c[1])];
+  };
+
+  // ---------------------------------------------------------------- tooltip + picked pile
+  const tip = $('#tip');
+  function placeTip(ev) {
+    const wrap = $('#mapwrap');
+    const [mx, my] = d3.pointer(ev, wrap);
+    tip.hidden = false;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(4, Math.min(wrap.clientWidth - tw - 4, mx + 12)) + 'px';
+    tip.style.top = Math.max(4, my - th - 10 < 4 ? my + 14 : my - th - 10) + 'px';
+  }
+  function tipLines(lines) {
+    tip.replaceChildren(...lines.map((t, i) => { const d = document.createElement('div'); if (i === 0) d.className = 't1'; d.textContent = t; return d; }));
+  }
+  function tipPile(ev, d) {
+    if (!d.sel) return;
+    tipLines([`Pile ${d.id} · ${d.project}${d.unit ? ' unit ' + d.unit : ''}`,
+      `${fmt0(d.diam)} ft across, ${fmt0(d.hmax)} ft tall`,
+      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t`,
+      d.basis === 'open_2022' ? 'On ground open in 2022: check' : 'Canopy removed since 2022']);
+    placeTip(ev);
+  }
+  function tipUnit(ev, u) {
+    tipLines([`${u.project}${u.unit && u.unit !== u.project ? ' unit ' + u.unit : ''}`,
+      `${fmt1(u.acres)} acres · ${fmt0(u.lidar)}% under Feb 2026 lidar`,
+      `${fmt0(u.inview)}% inside the analysis extent`]);
+    placeTip(ev);
+  }
+  function hideTip() { tip.hidden = true; }
+
+  function pick(d, zoomTo) {
+    S.picked = d;
+    const box = $('#pick');
+    box.hidden = false;
+    box.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'ph';
+    const h = document.createElement('b');
+    h.textContent = `Pile ${d.id} · ${d.project}${d.unit ? ', unit ' + d.unit : ''}`;
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'bp-btn'; close.textContent = 'Close';
+    close.addEventListener('click', () => { S.picked = null; box.hidden = true; d3.select('#map .pickring').attr('r', 0); });
+    head.append(h, close);
+    box.append(head);
+    const r = d.r;
+    [['Footprint', `${fmt0(d.area)} m² (${d3.format('.2f')(d.area / 4046.86)} ac)`], ['Diameter', `${fmt0(d.diam)} ft`],
+     ['Height', `${fmt0(d.hmax)} ft`], ['Gross volume', `${fmt0(d.vol)} m³ (${fmt0(d.vol * 1.30795)} yd³)`],
+     ['Sampling 95% interval', `${fmt0(d.vlo)}–${fmt0(d.vhi)} m³ (±${fmt1(d.ci)}%)`],
+     ['Half-density change', `${fmt1(Number(r.dens_sens))}%`],
+     ['Dry tons (scenario)', fmt0(d.tons)], ['Carbonator hours', fmt1(d.tons / S.p.carb_rate)],
+     ['2022 canopy median', `${fmt1(Number(r.chm22_p50))} m`], ['Lidar returns on pile', fmt0(Number(r.n_ret))],
+     ['Location (UTM 10N)', `${fmt0(d.x)} E, ${fmt0(d.y)} N`]].forEach(([k, v]) => {
+      const c = document.createElement('div');
+      const kb = document.createElement('span'); kb.style.color = 'var(--color-fg-muted)'; kb.textContent = k + ': ';
+      const vb = document.createElement('span'); vb.textContent = v;
+      c.append(kb, vb); box.append(c);
+    });
+    if (zoomTo) {
+      const [a, b, c, e] = bbox(d.g.length ? d.g : [[[d.x, d.y]]]);
+      const pad = Math.max(40, (c - a) * 1.5);
+      zoomToBox(a - pad, b - pad, c + pad, e + pad);
+    }
+    applyZoom();
+  }
+
+  // ---------------------------------------------------------------- tables, tiles, legend
+  function td(text, num) { const c = document.createElement('td'); if (num) c.className = 'n'; c.textContent = text; return c; }
+
+  function update() {
+    if (!P) return;
+    const sc = scenario();
+    const a = sc.all;
+    $('#k-piles').textContent = fmt0(a.n);
+    $('#k-piles-s').textContent = `of ${fmt0(P.length)} piles 40 ft+ in the units`;
+    $('#k-tons').textContent = fmt0(a.T);
+    $('#k-tons-s').textContent = `range ${fmt0(a.lo)}–${fmt0(a.hi)} (packing 0.15–0.25)`;
+    $('#k-days').textContent = fmt0(a.days) + ' days';
+    $('#k-days-s').textContent = `${fmt1(a.seasons)} seasons · ${S.p.carb_units} machine${S.p.carb_units > 1 ? 's' : ''} · ${fmt0(a.runh)} run-h`;
+    $('#k-ccost').textContent = money(a.ccost);
+    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton` : '';
+    $('#k-gcost').textContent = money(a.gcost);
+    $('#k-gcost-s').textContent = `$${fmt0(sc.ghPerTon)} per dry ton · ${fmt0(a.loads)} loads at ${S.p.haul_miles} mi`;
+    $('#k-char').textContent = fmt0(a.char) + ' t';
+    $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
+
+    // by project
+    const tb = $('#proj-table tbody');
+    tb.replaceChildren();
+    const inView = {}, withL = {};
+    U.forEach((u) => { inView[u.project] = (inView[u.project] || 0) + u.acres * u.inview / 100; withL[u.project] = (withL[u.project] || 0) + u.acres * u.lidar / 100; });
+    let tv = 0, tl = 0;
+    sc.byProject.forEach((r) => {
+      const tr = document.createElement('tr');
+      const nameCell = td(r.project === OUTSIDE ? 'Outside the four unit layers' : r.project);
+      const sw = document.createElement('span'); sw.className = 'bp-sw'; sw.style.background = colorOf[r.project]; sw.style.marginRight = '6px';
+      nameCell.prepend(sw);
+      const iv = inView[r.project], wl = withL[r.project];
+      if (iv) { tv += iv; tl += wl; }
+      tr.append(nameCell, td(fmt0(r.n), 1), td(iv ? fmt0(iv) : '—', 1), td(iv ? `${fmt0(wl)} (${fmt0(100 * wl / iv)}%)` : '—', 1),
+        td(fmt0(r.T), 1), td(fmt0(r.days), 1), td(r.n ? money(r.ccost) : '—', 1), td(r.n ? money(r.gcost) : '—', 1));
+      tb.append(tr);
+    });
+    const tot = document.createElement('tr');
+    tot.className = 'tot';
+    tot.append(td('All selected'), td(fmt0(a.n), 1), td(fmt0(tv), 1), td(`${fmt0(tl)} (${fmt0(100 * tl / tv)}%)`, 1), td(fmt0(a.T), 1),
+      td(fmt0(a.days), 1), td(money(a.ccost), 1), td(money(a.gcost), 1));
+    tb.append(tot);
+
+    legend();
+    stylePiles();
+  }
+
+  function legend() {
+    const lg = $('#legend');
+    lg.replaceChildren();
+    const item = (swStyle, cls, text) => { const s = document.createElement('span'); const sw = document.createElement('span'); sw.className = cls; Object.assign(sw.style, swStyle); const t = document.createElement('span'); t.textContent = text; s.append(sw, t); lg.append(s); };
+    if (S.colorBy === 'basis') {
+      item({ background: COLORS[0] }, 'bp-sw', 'Canopy removed since 2022');
+      item({ background: 'var(--ui-chart-status-warning)' }, 'bp-sw', 'On ground open in 2022 (check)');
+    } else {
+      projList.forEach((p) => item({ background: colorOf[p] }, 'bp-sw', p === OUTSIDE ? 'Outside unit layers' : p));
+    }
+    item({ borderColor: 'var(--ui-chart-status-serious)', background: 'transparent', opacity: 0.8 }, 'bp-sq', 'Unit area without lidar (shaded)');
+    item({ borderColor: 'var(--ui-chart-status-good)', background: 'transparent' }, 'bp-sq', 'Forest Service land');
+    item({ borderColor: 'var(--ui-chart-axis)', background: 'transparent', borderStyle: 'dashed' }, 'bp-sq', 'Analysis extent; grey outside the flight');
+  }
+
+  $('#z-in').addEventListener('click', () => zoom && d3.select('#map').transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 2));
+  $('#z-out').addEventListener('click', () => zoom && d3.select('#map').transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 0.5));
+  $('#z-fit').addEventListener('click', () => zoom && d3.select('#map').transition().duration(reduceMotion ? 0 : 400).call(zoom.transform, d3.zoomIdentity));
+
+  let lastW = 0;
+  const render = () => {
+    if (!prep()) {
+      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char'].forEach((s) => { $(s).textContent = '—'; });
+      return;
+    }
+    if (!S.built) buildControls();
+    const W = $('#mapwrap').clientWidth;
+    if (W !== lastW || !geo) { lastW = W; drawMap(); }
+    update();
+  };
+
+  const get = (f) => fetch('data/' + f).then((r) => {
+    if (!r.ok) throw new Error(f + ': ' + r.status);
+    return r.json();
+  });
+  Promise.all(['piles.json', 'units.json', 'layers.json', 'assumptions.json', 'hillshade.json'].map(get))
+    .then(([piles, units, layers, assumptions, hillshade]) => {
+      Object.assign(DATA, { piles, units, layers, assumptions, hillshade });
+      render();
+      new ResizeObserver(() => render()).observe($('#mapwrap'));
+    })
+    .catch((err) => {
+      const e = $('#load-error');
+      e.hidden = false;
+      e.textContent = 'The data did not load (' + err.message + '). Open this page from a web server, not as a local file.';
+    });
+})();
+</script>
+</div>
+</body>
+</html>
