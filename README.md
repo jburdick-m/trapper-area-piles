@@ -23,7 +23,30 @@ Coordinates are NAD83 / UTM zone 10N (metres).
 - Piles are opaque mounds in the Feb 4, 2026 ASO lidar that were not there in 2022, measured against the 2022 TNF 1 m bare-earth DEM and canopy height model.
 - Volume is gross (including air space), the 2026 surface minus 2022 bare earth over each footprint.
 - Dry tons = volume × packing ratio × wood density (Hardy 1996, PNW-GTR-364). Defaults: 0.20 and 380 kg/m³.
-- Cost defaults come from the Siskiyou County biochar demonstration (2020–21), Earth Foundries (2024) and the Central Sierra feedstock report (2023). They are planning estimates, not quotes.
+- Cost defaults come from the Siskiyou County biochar demonstration (2020–21), Earth Foundries (2024), the Central Sierra feedstock report (2023), Yoshioka et al. (2017) and CAL FIRE (2023). They are planning estimates, not quotes.
+
+### What the costs include
+
+| Grind and haul | Carbonator |
+| --- | --- |
+| Grind and load ($/dry t), chip-van haul (round trip + 1 h load/unload), contractor markup | Contract rate per run-hour (machine, operator, feeding loader, margin) |
+| Grinder and loader move-in per project | Carbonator and loader move-in per project, per machine |
+| Fire support (water tender, patrol) per working day | Fire support per machine per working day |
+| Plant gate payment or tipping fee (default: no credit) | Biochar value not credited |
+
+Grind-and-haul working days are set by the slower of the grinder (dry t/h × hours) and the trucks (whole round trips per 11 h driver day). Not included: agency contract preparation and oversight, road maintenance or reconstruction for chip vans, permits, and cleanup of pile sites.
+
+### Chip destinations
+
+Routed road miles from the units (OpenStreetMap routing):
+
+| Destination | One-way | Status |
+| --- | --- | --- |
+| Rio Bravo Rocklin, Lincoln | 69 mi | Operating; burns forest fuel (default) |
+| Camptonville Community Partnership plant, Dobbins | 26 mi | Planned 3–5 MW; not confirmed running as of Feb 2026 |
+| Sierra Pacific cogeneration, Quincy | 75 mi | Mill plant; check it buys outside fuel |
+| Woodland Biomass, Woodland | 106 mi | |
+| Buena Vista Biomass, Ione | 112 mi | Status unconfirmed |
 
 ## Limits
 

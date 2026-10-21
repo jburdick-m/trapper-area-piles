@@ -22,16 +22,6 @@
     --ui-font-size-title: 1.9rem; --ui-font-weight-medium: 600; --ui-dur-slow: 300ms;
     color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-bg: #151917; --color-panel: #1e2421; --color-fg: #e7ebe8; --color-fg-muted: #a3aca6;
-      --color-border-line: #333b37; --color-warn: #e0b040; --color-bad: #ef8a80;
-      --ui-surface-popover: #252c29; --ui-border: #3d4642; --ui-shadow-popover: 0 4px 14px rgba(0, 0, 0, .5);
-      --ui-text-secondary: #a3aca6; --ui-chart-muted: #6f7772; --ui-chart-axis: #7d857f;
-      --ui-chart-status-good: #5fb47f; --ui-chart-status-serious: #e8833a; --ui-chart-status-warning: #e2b93b;
-      color-scheme: dark;
-    }
-  }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body { background: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); font-size: 15px; }
@@ -83,6 +73,7 @@
   .bp-sl label { color: var(--color-fg); }
   .bp-sl output { font-variant-numeric: tabular-nums; color: var(--color-fg); text-align: right; }
   .bp-sl input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--color-fg); }
+  .bp-sl select.bp-dest { grid-column: 1 / -1; width: 100%; font: inherit; }
   .bp-checks { display: flex; flex-direction: column; gap: var(--ui-gap-xs); font-size: var(--ui-font-size-caption); }
   .bp-checks label { display: flex; gap: var(--ui-gap-xs); align-items: center; cursor: pointer; }
   .bp details { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
@@ -166,6 +157,7 @@
       <div class="bp-group" id="g-tons"></div>
       <div class="bp-group" id="g-haul"></div>
       <div class="bp-group" id="g-carb"></div>
+      <div class="bp-group" id="g-both"></div>
       <button type="button" class="bp-btn" id="reset">Reset to defaults</button>
     </aside>
   </div>
@@ -237,11 +229,14 @@
   // ---------------------------------------------------------------- controls
   const GROUPS = [
     ['g-tons', 'Pile tonnage', ['packing_ratio', 'wood_density', 'vol_adjust']],
-    ['g-haul', 'Grind and haul', ['grind_cost', 'haul_miles', 'truck_rate', 'load_bdt', 'haul_speed', 'markup']],
-    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield', 'season_days']],
+    ['g-haul', 'Grind and haul', ['grind_cost', 'grind_rate', 'grind_hours', 'haul_miles', 'haul_speed', 'truck_rate',
+                                  'load_bdt', 'trucks', 'markup', 'grind_mob', 'gate_price']],
+    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield']],
+    ['g-both', 'Both methods', ['fire_support', 'season_days']],
   ];
   const showVal = (a, v) => {
-    if (a.unit === '$/run-h' || a.unit === '$/h' || a.unit === '$/dry t') return '$' + fmt0(v) + ' ' + a.unit.slice(2);
+    if (a.key === 'gate_price') return v === 0 ? 'no credit' : (v > 0 ? 'pays $' : 'charges $') + fmt0(Math.abs(v)) + ' /dry t';
+    if (a.unit === '$/run-h' || a.unit === '$/h' || a.unit === '$/dry t' || a.unit === '$/day') return '$' + fmt0(v) + ' ' + a.unit.slice(2);
     if (a.unit === '$') return '$' + fmt0(v);
     const s = a.step < 1 ? d3.format(a.step < 0.1 ? '.2f' : '.1f')(v) : fmt0(v);
     return (a.key === 'vol_adjust' && v > 0 ? '+' : '') + s + (a.unit ? ' ' + a.unit : '');
@@ -255,6 +250,31 @@
       const h = document.createElement('h3');
       h.textContent = title;
       box.append(h);
+      if (id === 'g-haul' && DATA.destinations && DATA.destinations.length) {
+        // destination picker: sets the haul distance slider to that plant's routed road miles
+        const row = document.createElement('div');
+        row.className = 'bp-sl';
+        const lab = document.createElement('label');
+        lab.htmlFor = 'dest';
+        lab.textContent = 'Deliver to';
+        const sel = document.createElement('select');
+        sel.id = 'dest';
+        sel.className = 'bp-dest';
+        DATA.destinations.forEach((d) => sel.append(new Option(`${d.name}, ${d.miles} mi`, String(d.miles))));
+        sel.append(new Option('Custom distance (slider)', ''));
+        sel.addEventListener('change', () => {
+          if (!sel.value) return;
+          S.p.haul_miles = Number(sel.value);
+          const i = document.getElementById('s-haul_miles');
+          if (i) i.value = S.p.haul_miles;
+          const a = A.find((x) => x.key === 'haul_miles');
+          const o = document.getElementById('o-haul_miles');
+          if (o && a) o.textContent = showVal(a, S.p.haul_miles);
+          update();
+        });
+        row.append(lab, sel);
+        box.append(row);
+      }
       const src = document.createElement('details');
       const sum = document.createElement('summary');
       sum.textContent = 'Where the defaults come from';
@@ -274,7 +294,15 @@
         inp.type = 'range';
         inp.id = 's-' + k;
         inp.min = a.min; inp.max = a.max; inp.step = a.step; inp.value = S.p[k];
-        inp.addEventListener('input', () => { S.p[k] = Number(inp.value); out.textContent = showVal(a, S.p[k]); update(); });
+        inp.addEventListener('input', () => {
+          S.p[k] = Number(inp.value);
+          out.textContent = showVal(a, S.p[k]);
+          if (k === 'haul_miles') {
+            const d = document.getElementById('dest');
+            if (d) d.value = [...d.options].some((o) => o.value === String(S.p[k])) ? String(S.p[k]) : '';
+          }
+          update();
+        });
         out.textContent = showVal(a, S.p[k]);
         row.append(lab, out, inp);
         box.append(row);
@@ -326,16 +354,25 @@
     const p = S.p;
     const f = (1 + p.vol_adjust / 100) * p.wood_density / KG_PER_TON;
     P.forEach((d) => { d.tons = d.vol * f * p.packing_ratio; d.sel = S.projects.has(d.project) && (S.open || d.basis !== 'open_2022') && d.diam >= S.minDiam; });
-    const haulPerTon = p.truck_rate * (2 * p.haul_miles / p.haul_speed + 1) / p.load_bdt;
-    const ghPerTon = (p.grind_cost + haulPerTon) * (1 + p.markup / 100);
+    // Grind and haul: round trip = drive both ways + 1 h to load and unload; each truck makes as many
+    // whole trips as fit in an 11 h driver day (at least one). Working days = the slower of the grinder
+    // and the trucks. Cost = (grind + haul) x markup - plant gate payment, + move-ins + fire support.
+    const tripH = 2 * p.haul_miles / p.haul_speed + 1;
+    const haulPerTon = p.truck_rate * tripH / p.load_bdt;
+    const ghPerTon = (p.grind_cost + haulPerTon) * (1 + p.markup / 100) - p.gate_price;
+    const tripsPerTruckDay = Math.max(1, Math.floor(11 / tripH));
     const calc = (rows) => {
       const T = d3.sum(rows, (d) => d.tons);
+      const nproj = new Set(rows.map((d) => d.project)).size;
+      const loads = T / p.load_bdt;
+      const gdays = Math.max(T / (p.grind_rate * p.grind_hours), loads / (p.trucks * tripsPerTruckDay));
+      const gcost = T * ghPerTon + (rows.length ? p.grind_mob * nproj : 0) + p.fire_support * gdays;
       const runh = T / p.carb_rate;
       const days = runh / p.carb_hours / p.carb_units;
-      const nproj = new Set(rows.map((d) => d.project)).size;
-      const ccost = runh * p.carb_cost + (rows.length ? p.carb_mob * p.carb_units * nproj : 0);
+      const ccost = runh * p.carb_cost + (rows.length ? p.carb_mob * p.carb_units * nproj : 0)
+        + p.fire_support * days * p.carb_units;
       return { n: rows.length, T, lo: T * 0.15 / p.packing_ratio, hi: T * 0.25 / p.packing_ratio, runh, days,
-               seasons: days / p.season_days, ccost, gcost: T * ghPerTon, loads: T / p.load_bdt, char: T * p.biochar_yield / 100 };
+               seasons: days / p.season_days, ccost, gcost, gdays, loads, char: T * p.biochar_yield / 100 };
     };
     const sel = P.filter((d) => d.sel);
     return { all: calc(sel), byProject: projList.map((pr) => ({ project: pr, ...calc(sel.filter((d) => d.project === pr)) })), haulPerTon, ghPerTon };
@@ -526,9 +563,9 @@
     $('#k-days').textContent = fmt0(a.days) + ' days';
     $('#k-days-s').textContent = `${fmt1(a.seasons)} seasons · ${S.p.carb_units} machine${S.p.carb_units > 1 ? 's' : ''} · ${fmt0(a.runh)} run-h`;
     $('#k-ccost').textContent = money(a.ccost);
-    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton` : '';
+    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton all-in, incl. move-ins and fire support` : '';
     $('#k-gcost').textContent = money(a.gcost);
-    $('#k-gcost-s').textContent = `$${fmt0(sc.ghPerTon)} per dry ton · ${fmt0(a.loads)} loads at ${S.p.haul_miles} mi`;
+    $('#k-gcost-s').textContent = a.T ? `$${fmt0(a.gcost / a.T)} per dry ton all-in · ${fmt0(a.loads)} loads, ${S.p.haul_miles} mi · ~${fmt0(a.gdays)} working days (${fmt1(a.gdays / S.p.season_days)} seasons)` : '';
     $('#k-char').textContent = fmt0(a.char) + ' t';
     $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
 
@@ -602,13 +639,13 @@
     update();
   };
 
-  const get = (f) => fetch('data/' + f + '?v=4cd1744aa5').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=7524f00a60').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });
-  Promise.all(['piles.json', 'units.json', 'layers.json', 'assumptions.json', 'hillshade.json'].map(get))
-    .then(([piles, units, layers, assumptions, hillshade]) => {
-      Object.assign(DATA, { piles, units, layers, assumptions, hillshade });
+  Promise.all(['piles.json', 'units.json', 'layers.json', 'assumptions.json', 'hillshade.json', 'destinations.json'].map(get))
+    .then(([piles, units, layers, assumptions, hillshade, destinations]) => {
+      Object.assign(DATA, { piles, units, layers, assumptions, hillshade, destinations });
       render();
       new ResizeObserver(() => render()).observe($('#mapwrap'));
     })
