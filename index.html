@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pike Area Burn Piles</title>
+<title>Trapper Area Piles</title>
 <meta name="description" content="Burn piles mapped from 2026 ASO lidar in the Pike-Magnus, Graveyard, Sleighville and Alaska Peak units, Tahoe National Forest, with disposal scenarios.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400&display=swap">
@@ -105,17 +105,19 @@
 <div class="page">
 <div class="bp" id="burn-piles">
   <header>
-    <h1 id="title">Pike area burn piles</h1>
+    <h1 id="title">Trapper area piles</h1>
     <p class="bp-err" id="load-error" hidden></p>
   </header>
 
   <div class="bp-kpis" id="kpis">
     <div class="bp-kpi"><span class="kl">Piles selected</span><span class="kv" id="k-piles">—</span><span class="ks" id="k-piles-s"></span></div>
     <div class="bp-kpi"><span class="kl">Dry tons</span><span class="kv" id="k-tons">—</span><span class="ks" id="k-tons-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span></div>
     <div class="bp-kpi"><span class="kl">Carbonator time</span><span class="kv" id="k-days">—</span><span class="ks" id="k-days-s"></span></div>
     <div class="bp-kpi"><span class="kl">Carbonator cost</span><span class="kv" id="k-ccost">—</span><span class="ks" id="k-ccost-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span></div>
     <div class="bp-kpi"><span class="kl">Biochar made</span><span class="kv" id="k-char">—</span><span class="ks" id="k-char-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Grind and haul, all project ground</span><span class="kv" id="k-gcost-all">—</span><span class="ks" id="k-gcost-all-s"></span></div>
+    <div class="bp-kpi"><span class="kl">Carbonator, all project ground</span><span class="kv" id="k-ccost-all">—</span><span class="ks" id="k-ccost-all-s"></span></div>
   </div>
 
   <div class="bp-main">
@@ -161,8 +163,8 @@
         </div>
       </div>
       <div class="bp-group" id="g-tons"></div>
-      <div class="bp-group" id="g-carb"></div>
       <div class="bp-group" id="g-haul"></div>
+      <div class="bp-group" id="g-carb"></div>
       <button type="button" class="bp-btn" id="reset">Reset to defaults</button>
     </aside>
   </div>
@@ -171,7 +173,7 @@
     <h2>By project</h2>
     <div class="bp-scroll wide">
       <table class="bp-table" id="proj-table">
-        <thead><tr><th>Project</th><th class="n">Piles</th><th class="n">Unit acres in extent</th><th class="n">With lidar</th><th class="n">Dry tons</th><th class="n">Carbonator days</th><th class="n">Carbonator cost</th><th class="n">Grind and haul</th></tr></thead>
+        <thead><tr><th>Project</th><th class="n">Piles</th><th class="n">Unit acres</th><th class="n">With lidar</th><th class="n">Dry tons</th><th class="n">Grind and haul</th><th class="n">Carbonator days</th><th class="n">Carbonator cost</th><th class="n">Dry tons, all ground</th><th class="n">Grind and haul, all ground</th><th class="n">Carbonator, all ground</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -234,8 +236,8 @@
   // ---------------------------------------------------------------- controls
   const GROUPS = [
     ['g-tons', 'Pile tonnage', ['packing_ratio', 'wood_density', 'vol_adjust']],
-    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield', 'season_days']],
     ['g-haul', 'Grind and haul', ['grind_cost', 'haul_miles', 'truck_rate', 'load_bdt', 'haul_speed', 'markup']],
+    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield', 'season_days']],
   ];
   const showVal = (a, v) => {
     if (a.unit === '$/run-h' || a.unit === '$/h' || a.unit === '$/dry t') return '$' + fmt0(v) + ' ' + a.unit.slice(2);
@@ -529,28 +531,37 @@
     $('#k-char').textContent = fmt0(a.char) + ' t';
     $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
 
-    // by project
+    // by project. "All ground": each project's flown totals plus its unflown share of unit
+    // ground, i.e. x (1 + unflown fraction), unflown = unit acres without Feb 2026 lidar.
     const tb = $('#proj-table tbody');
     tb.replaceChildren();
-    const inView = {}, withL = {};
-    U.forEach((u) => { inView[u.project] = (inView[u.project] || 0) + u.acres * u.inview / 100; withL[u.project] = (withL[u.project] || 0) + u.acres * u.lidar / 100; });
-    let tv = 0, tl = 0;
+    const unitAc = {}, withL = {};
+    U.forEach((u) => { unitAc[u.project] = (unitAc[u.project] || 0) + u.acres; withL[u.project] = (withL[u.project] || 0) + u.acres * u.lidar / 100; });
+    const all = { ac: 0, wl: 0, T: 0, g: 0, c: 0 };
     sc.byProject.forEach((r) => {
       const tr = document.createElement('tr');
       const nameCell = td(r.project === OUTSIDE ? 'Outside the four unit layers' : r.project);
       const sw = document.createElement('span'); sw.className = 'bp-sw'; sw.style.background = colorOf[r.project]; sw.style.marginRight = '6px';
       nameCell.prepend(sw);
-      const iv = inView[r.project], wl = withL[r.project];
-      if (iv) { tv += iv; tl += wl; }
-      tr.append(nameCell, td(fmt0(r.n), 1), td(iv ? fmt0(iv) : '—', 1), td(iv ? `${fmt0(wl)} (${fmt0(100 * wl / iv)}%)` : '—', 1),
-        td(fmt0(r.T), 1), td(fmt0(r.days), 1), td(r.n ? money(r.ccost) : '—', 1), td(r.n ? money(r.gcost) : '—', 1));
+      const ac = unitAc[r.project] || 0, wl = withL[r.project] || 0;
+      const f = 1 + (ac ? 1 - wl / ac : 0);
+      all.ac += ac; all.wl += wl; all.T += r.T * f; all.g += r.gcost * f; all.c += r.ccost * f;
+      tr.append(nameCell, td(fmt0(r.n), 1), td(ac ? fmt0(ac) : '—', 1), td(ac ? `${fmt0(wl)} (${fmt0(100 * wl / ac)}%)` : '—', 1),
+        td(fmt0(r.T), 1), td(r.n ? money(r.gcost) : '—', 1), td(fmt0(r.days), 1), td(r.n ? money(r.ccost) : '—', 1),
+        td(fmt0(r.T * f), 1), td(r.n ? money(r.gcost * f) : '—', 1), td(r.n ? money(r.ccost * f) : '—', 1));
       tb.append(tr);
     });
     const tot = document.createElement('tr');
     tot.className = 'tot';
-    tot.append(td('All selected'), td(fmt0(a.n), 1), td(fmt0(tv), 1), td(`${fmt0(tl)} (${fmt0(100 * tl / tv)}%)`, 1), td(fmt0(a.T), 1),
-      td(fmt0(a.days), 1), td(money(a.ccost), 1), td(money(a.gcost), 1));
+    tot.append(td('All selected'), td(fmt0(a.n), 1), td(fmt0(all.ac), 1), td(`${fmt0(all.wl)} (${fmt0(100 * all.wl / all.ac)}%)`, 1),
+      td(fmt0(a.T), 1), td(money(a.gcost), 1), td(fmt0(a.days), 1), td(money(a.ccost), 1),
+      td(fmt0(all.T), 1), td(money(all.g), 1), td(money(all.c), 1));
     tb.append(tot);
+    const addPct = a.T ? 100 * (all.T / a.T - 1) : 0;
+    $('#k-gcost-all').textContent = money(all.g);
+    $('#k-gcost-all-s').textContent = `${fmt0(all.T)} dry t · flown piles + ${fmt0(addPct)}% for unflown unit ground`;
+    $('#k-ccost-all').textContent = money(all.c);
+    $('#k-ccost-all-s').textContent = `${fmt0(all.T)} dry t · flown piles + ${fmt0(addPct)}% for unflown unit ground`;
 
     legend();
     stylePiles();
@@ -578,7 +589,7 @@
   let lastW = 0;
   const render = () => {
     if (!prep()) {
-      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char'].forEach((s) => { $(s).textContent = '—'; });
+      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char', '#k-gcost-all', '#k-ccost-all'].forEach((s) => { $(s).textContent = '—'; });
       return;
     }
     if (!S.built) buildControls();
