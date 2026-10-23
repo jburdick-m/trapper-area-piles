@@ -15,6 +15,7 @@ The page maps 205 piles 40 ft and wider. Sliders set packing ratio, wood density
 | `data/layers.json` | Project boundaries, lidar coverage, National Forest land, analysis extent |
 | `data/assumptions.json` | Slider defaults and ranges, with their sources |
 | `data/hillshade.jpg` | 2022 hillshade background, 25 m |
+| `data/piles/pile_<id>.webp` | Lit 3-D view of each pile at true scale with a chip van and tractor beside it, shown when a pile is clicked |
 
 Coordinates are NAD83 / UTM zone 10N (metres).
 
@@ -47,6 +48,14 @@ Routed road miles from the units (OpenStreetMap routing):
 | Sierra Pacific cogeneration, Quincy | 75 mi | Mill plant; check it buys outside fuel |
 | Woodland Biomass, Woodland | 106 mi | |
 | Buena Vista Biomass, Ione | 112 mi | Status unconfirmed |
+
+### Pile views
+
+`tools/pile_views.py` draws the image shown when a pile is clicked. It grids the Feb 4, 2026 returns (`gs://aso-august-w1/pc_work_10212026/pike_view2/tiles`) against 2022 bare earth from the USGS CA_SierraNevada 2022 ground returns (public EPT), inside each pile's footprint. The 2026 points are shifted onto the 2022 ground by the Feb flight's ground offset (+0.18 m, as in the pile mapping), standing trees are filtered out, and heights are capped at the mapped pile height. The chip van is a 53 ft × 8.5 ft × 13.5 ft trailer behind a day-cab tractor, about 69 ft overall. Tree filtering and smoothing make the drawn surface a little low: image volumes run a median 8% under `vol_m3` (90% of piles under by no more than 22%). The 2022 ground for each pile is cached in `gs://aso-august-w1/pc_work_10212026/pile_views/ground22/` so the render runs from the bucket alone.
+
+`tools/pile_views_vm.sh` is the startup script that renders all piles on a GCE VM in us-west1 (same region as the bucket) and writes them to `gs://aso-august-w1/pc_work_10212026/pile_views/out/`. Copy them into `data/piles/` and bump `IMG_V` in `index.html`.
+
+Chip-van loads in the pile panel are the pile's scenario dry tons divided by the load size slider.
 
 ## Limits
 

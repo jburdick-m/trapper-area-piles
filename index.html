@@ -66,6 +66,10 @@
   .bp-pick { margin-top: var(--ui-gap-md); padding: var(--ui-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); font-size: var(--ui-font-size-caption); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--ui-gap-xs) var(--ui-gap-md); font-variant-numeric: tabular-nums; }
   .bp-pick b { font-weight: var(--ui-font-weight-medium); }
   .bp-pick .ph { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--ui-gap-sm); align-items: center; }
+  .bp-pick figure { grid-column: 1 / -1; margin: 0 0 var(--ui-gap-xs); }
+  .bp-pick figure img { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; border-radius: var(--ui-radius); background: #fff; }
+  .bp-pick figcaption { color: var(--color-fg-muted); text-align: center; margin-top: var(--ui-gap-xs); }
+  .bp-pick .attrs { display: contents; }
   .bp-controls { display: flex; flex-direction: column; gap: var(--ui-gap-md); }
   .bp-group { display: flex; flex-direction: column; gap: var(--ui-gap-sm); border-top: 1px solid var(--color-border-line); padding-top: var(--ui-pad-md); }
   .bp-group:first-of-type { border-top: 0; padding-top: 0; }
@@ -187,6 +191,7 @@
   const parseG = (g) => (typeof g === 'string' ? JSON.parse(g) : g || []);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const OUTSIDE = 'outside units';
+  const IMG_V = '20261023';  // bump when the pile images in data/piles/ are re-rendered
 
   const S = { p: {}, defaults: {}, built: false, projects: new Set(), open: true, minDiam: 40, colorBy: 'project',
               t: d3.zoomIdentity, picked: null, show: { hs: true, fs: true, cov: true, units: true, proj: true } };
@@ -502,7 +507,7 @@
     if (!d.sel) return;
     tipLines([`Pile ${d.id} · ${d.project}${d.unit ? ' unit ' + d.unit : ''}`,
       `${fmt0(d.diam)} ft across, ${fmt0(d.hmax)} ft tall`,
-      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t`,
+      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`,
       d.basis === 'open_2022' ? 'On ground open in 2022: check' : 'Canopy removed since 2022']);
     placeTip(ev);
   }
@@ -513,6 +518,9 @@
     placeTip(ev);
   }
   function hideTip() { tip.hidden = true; }
+
+  // whole chip-van loads at the scenario's load size: one decimal under 10
+  const vanLoads = (d) => { const n = d.tons / S.p.load_bdt; return n < 10 ? fmt1(n) : fmt0(n); };
 
   function pick(d, zoomTo) {
     S.picked = d;
@@ -527,13 +535,42 @@
     close.type = 'button'; close.className = 'bp-btn'; close.textContent = 'Close';
     close.addEventListener('click', () => { S.picked = null; box.hidden = true; d3.select('#map .pickring').attr('r', 0); });
     head.append(h, close);
-    box.append(head);
+    // lit 3-D view from the lidar (tools/pile_views.py), with a chip van and tractor for scale
+    const fig = document.createElement('figure');
+    const img = document.createElement('img');
+    img.src = `data/piles/pile_${d.id}.webp?v=${IMG_V}`;
+    img.alt = `3-D view of pile ${d.id} from the Feb 2026 lidar, with a chip van and tractor beside it for scale`;
+    img.loading = 'lazy';
+    img.addEventListener('error', () => { fig.hidden = true; });
+    const cap = document.createElement('figcaption');
+    cap.textContent = 'Height above 2022 bare earth from the Feb 4, 2026 lidar, true scale. The chip van (53 ft trailer and tractor, about 69 ft) is drawn to size.';
+    fig.append(img, cap);
+    const attrs = document.createElement('div');
+    attrs.className = 'attrs';
+    attrs.id = 'pick-attrs';
+    box.append(head, fig, attrs);
+    pickAttrs(d);
+    if (zoomTo) {
+      const [a, b, c, e] = bbox(d.g.length ? d.g : [[[d.x, d.y]]]);
+      const pad = Math.max(40, (c - a) * 1.5);
+      zoomToBox(a - pad, b - pad, c + pad, e + pad);
+    }
+    applyZoom();
+  }
+
+  // attributes follow the sliders, so they are refilled on every update
+  function pickAttrs(d) {
+    const box = document.getElementById('pick-attrs');
+    if (!box) return;
+    box.replaceChildren();
     const r = d.r;
     [['Footprint', `${fmt0(d.area)} m² (${d3.format('.2f')(d.area / 4046.86)} ac)`], ['Diameter', `${fmt0(d.diam)} ft`],
      ['Height', `${fmt0(d.hmax)} ft`], ['Gross volume', `${fmt0(d.vol)} m³ (${fmt0(d.vol * 1.30795)} yd³)`],
      ['Sampling 95% interval', `${fmt0(d.vlo)}–${fmt0(d.vhi)} m³ (±${fmt1(d.ci)}%)`],
      ['Half-density change', `${fmt1(Number(r.dens_sens))}%`],
-     ['Dry tons (scenario)', fmt0(d.tons)], ['Carbonator hours', fmt1(d.tons / S.p.carb_rate)],
+     ['Dry tons (scenario)', fmt0(d.tons)],
+     ['Chip-van loads', `${vanLoads(d)} at ${S.p.load_bdt} dry t each`],
+     ['Carbonator hours', fmt1(d.tons / S.p.carb_rate)],
      ['2022 canopy median', `${fmt1(Number(r.chm22_p50))} m`], ['Lidar returns on pile', fmt0(Number(r.n_ret))],
      ['Location (UTM 10N)', `${fmt0(d.x)} E, ${fmt0(d.y)} N`]].forEach(([k, v]) => {
       const c = document.createElement('div');
@@ -541,12 +578,6 @@
       const vb = document.createElement('span'); vb.textContent = v;
       c.append(kb, vb); box.append(c);
     });
-    if (zoomTo) {
-      const [a, b, c, e] = bbox(d.g.length ? d.g : [[[d.x, d.y]]]);
-      const pad = Math.max(40, (c - a) * 1.5);
-      zoomToBox(a - pad, b - pad, c + pad, e + pad);
-    }
-    applyZoom();
   }
 
   // ---------------------------------------------------------------- tables, tiles, legend
@@ -606,6 +637,7 @@
 
     legend();
     stylePiles();
+    if (S.picked) pickAttrs(S.picked);
   }
 
   function legend() {
