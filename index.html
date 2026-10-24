@@ -594,9 +594,9 @@
     $('#k-ccost').textContent = money(a.ccost);
     $('#g-haul-total').textContent = a.n ? money(a.gcost) : '—';
     $('#g-carb-total').textContent = a.n ? money(a.ccost) : '—';
-    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton all-in, incl. move-ins and fire support` : '';
+    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton` : '';
     $('#k-gcost').textContent = money(a.gcost);
-    $('#k-gcost-s').textContent = a.T ? `$${fmt0(a.gcost / a.T)} per dry ton all-in · ${fmt0(a.loads)} loads, ${S.p.haul_miles} mi · ~${fmt0(a.gdays)} working days (${fmt1(a.gdays / S.p.season_days)} seasons)` : '';
+    $('#k-gcost-s').textContent = a.T ? `$${fmt0(a.gcost / a.T)} per dry ton · ${fmt0(a.loads)} loads, ${S.p.haul_miles} mi · ~${fmt0(a.gdays)} working days (${fmt1(a.gdays / S.p.season_days)} seasons)` : '';
     $('#k-char').textContent = fmt0(a.char) + ' t';
     $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
 
