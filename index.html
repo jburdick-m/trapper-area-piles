@@ -65,6 +65,7 @@
   .bp-sq { width: 0.9rem; height: 0.7rem; display: inline-block; border: 2px solid; }
   .bp-pick { margin-top: var(--ui-gap-md); padding: var(--ui-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); font-size: var(--ui-font-size-caption); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--ui-gap-xs) var(--ui-gap-md); font-variant-numeric: tabular-nums; }
   .bp-pick b { font-weight: var(--ui-font-weight-medium); }
+  .bp-pick[hidden] { display: none; }
   .bp-pick .ph { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--ui-gap-sm); align-items: center; }
   .bp-pick figure { grid-column: 1 / -1; margin: 0 0 var(--ui-gap-xs); }
   .bp-pick figure img { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; border-radius: var(--ui-radius); background: #fff; }
@@ -119,9 +120,7 @@
     <section class="bp-card" id="map-card">
       <h2>Piles, projects and lidar coverage</h2>
       <div class="bp-maptools" id="map-tools">
-        <label><input type="checkbox" id="lyr-hs" checked> Hillshade</label>
         <label><input type="checkbox" id="lyr-fs" checked> Forest Service land</label>
-        <label><input type="checkbox" id="lyr-cov" checked> No-lidar shading</label>
         <label><input type="checkbox" id="lyr-units" checked> Units</label>
         <label><input type="checkbox" id="lyr-proj" checked> Project boundaries</label>
         <label>Color piles by
@@ -149,9 +148,6 @@
       <div class="bp-group" id="g-filter">
         <h3>Which piles</h3>
         <div class="bp-checks" id="proj-checks"></div>
-        <div class="bp-checks">
-          <label><input type="checkbox" id="f-open" checked> Include piles on ground open in 2022</label>
-        </div>
         <div class="bp-sl">
           <label for="f-mindiam">Smallest pile counted</label><output id="o-mindiam" for="f-mindiam">40 ft</output>
           <input type="range" id="f-mindiam" min="40" max="120" step="5" value="40">
@@ -192,8 +188,8 @@
   const OUTSIDE = 'outside units';
   const IMG_V = '20261024';  // bump when the pile images in data/piles/ are re-rendered
 
-  const S = { p: {}, defaults: {}, built: false, projects: new Set(), open: true, minDiam: 40, colorBy: 'project',
-              t: d3.zoomIdentity, picked: null, show: { hs: true, fs: true, cov: true, units: true, proj: true } };
+  const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40, colorBy: 'project',
+              t: d3.zoomIdentity, picked: null, show: { fs: true, units: true, proj: true } };
   let P = null, U = null, L = null, A = null, geo = null, zoom = null, projList = [], colorOf = {};
 
   function prep() {
@@ -329,18 +325,16 @@
     S.built = true;
   }
 
-  $('#f-open').addEventListener('change', (e) => { S.open = e.target.checked; update(); });
   $('#f-mindiam').addEventListener('input', (e) => { S.minDiam = Number(e.target.value); $('#o-mindiam').textContent = S.minDiam + ' ft'; update(); });
   $('#color-by').addEventListener('change', (e) => { S.colorBy = e.target.value; update(); });
   $('#reset').addEventListener('click', () => {
     Object.assign(S.p, S.defaults);
     A.forEach((a) => { const i = document.getElementById('s-' + a.key); if (i) i.value = a.def; const o = document.getElementById('o-' + a.key); if (o) o.textContent = showVal(a, a.def); });
-    S.open = true; $('#f-open').checked = true;
     S.minDiam = 40; $('#f-mindiam').value = 40; $('#o-mindiam').textContent = '40 ft';
     projList.forEach((p, i) => { S.projects.add(p); const c = document.getElementById('p-' + i); if (c) c.checked = true; });
     update();
   });
-  [['lyr-hs', 'hs'], ['lyr-fs', 'fs'], ['lyr-cov', 'cov'], ['lyr-units', 'units'], ['lyr-proj', 'proj']].forEach(([id, k]) => {
+  [['lyr-fs', 'fs'], ['lyr-units', 'units'], ['lyr-proj', 'proj']].forEach(([id, k]) => {
     document.getElementById(id).addEventListener('change', (e) => { S.show[k] = e.target.checked; applyLayers(); });
   });
 
@@ -348,7 +342,7 @@
   function scenario() {
     const p = S.p;
     const f = (1 + p.vol_adjust / 100) * p.wood_density / KG_PER_TON;
-    P.forEach((d) => { d.tons = d.vol * f * p.packing_ratio; d.sel = S.projects.has(d.project) && (S.open || d.basis !== 'open_2022') && d.diam >= S.minDiam; });
+    P.forEach((d) => { d.tons = d.vol * f * p.packing_ratio; d.sel = S.projects.has(d.project) && d.diam >= S.minDiam; });
     // Grind and haul: round trip = drive both ways + 1 h to load and unload; each truck makes as many
     // whole trips as fit in an 11 h driver day (at least one). Working days = the slower of the grinder
     // and the trucks. Cost = (grind + haul) x markup - plant gate payment, + move-ins + fire support.
@@ -395,15 +389,26 @@
     const root = svg.append('g').attr('class', 'root');
     const hs = DATA.hillshade;
     if (hs) {
-      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url).attr('x', px(hs.x0)).attr('y', py(hs.y1))
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024b').attr('x', px(hs.x0)).attr('y', py(hs.y1))
         .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
     }
     const fs = L.find((d) => d.kind === 'fsland');
     if (fs) root.append('path').attr('class', 'lyr-fs').attr('d', ringsPath(fs.g, px, py)).attr('fill-rule', 'evenodd')
       .attr('fill', 'var(--ui-chart-status-good)').attr('fill-opacity', 0.10).attr('stroke', 'var(--ui-chart-status-good)').attr('stroke-opacity', 0.6).attr('stroke-width', 0.8);
+    // everything the Feb 2026 flight did not cover, out to the hillshade's edge: dark wash + hatching
     const cov = L.find((d) => d.kind === 'lidar');
-    if (cov) root.append('path').attr('class', 'lyr-cov').attr('d', ringsPath(ext.g, px, py) + ringsPath(cov.g, px, py)).attr('fill-rule', 'evenodd')
-      .attr('fill', 'var(--color-fg)').attr('fill-opacity', 0.16).attr('stroke', 'none');
+    if (cov) {
+      const b = hs || { x0: X0, y0: Y0, x1: X1, y1: Y1 };
+      const frame = [[[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]]];
+      svg.append('defs').append('pattern').attr('id', 'nolidar').attr('patternUnits', 'userSpaceOnUse')
+        .attr('width', 7).attr('height', 7).attr('patternTransform', 'rotate(45)')
+        .append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 7)
+        .attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.4).attr('stroke-opacity', 0.45);
+      const d = ringsPath(frame, px, py) + ringsPath(cov.g, px, py);
+      root.append('path').attr('d', d).attr('fill-rule', 'evenodd').attr('fill', 'var(--color-fg)').attr('fill-opacity', 0.28).attr('stroke', 'none');
+      root.append('path').attr('class', 'nolidar-hatch').attr('d', d).attr('fill-rule', 'evenodd').attr('fill', 'url(#nolidar)').attr('stroke', 'none');
+      root.append('path').attr('d', ringsPath(cov.g, px, py)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.2).attr('stroke-opacity', 0.7);
+    }
     root.append('path').attr('d', ringsPath(ext.g, px, py)).attr('fill', 'none').attr('stroke', 'var(--ui-chart-axis)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1);
     root.append('g').attr('class', 'lyr-units').selectAll('path').data(U).join('path')
       .attr('d', (u) => ringsPath(u.g, px, py)).attr('fill-rule', 'evenodd')
@@ -431,6 +436,7 @@
     const k = S.t.k;
     const svg = d3.select('#map');
     svg.select('g.root').attr('transform', S.t);
+    svg.select('#nolidar').attr('patternTransform', `rotate(45) scale(${1 / k})`);
     // footprints fade in as a 20 m pile reaches ~8 px; dots shrink to markers once footprints are clear
     const fpOn = Math.max(0, Math.min(1, (k - 2.5) / 3));
     svg.selectAll('g.fp path').attr('fill-opacity', 0.55 * fpOn).attr('stroke-opacity', fpOn).style('display', fpOn > 0 ? null : 'none');
@@ -451,9 +457,7 @@
 
   function applyLayers() {
     const svg = d3.select('#map');
-    svg.selectAll('.lyr-hs').style('display', S.show.hs ? null : 'none');
     svg.selectAll('.lyr-fs').style('display', S.show.fs ? null : 'none');
-    svg.selectAll('.lyr-cov').style('display', S.show.cov ? null : 'none');
     svg.selectAll('.lyr-units').style('display', S.show.units ? null : 'none');
     svg.selectAll('.lyr-proj').style('display', S.show.proj ? null : 'none');
   }
@@ -636,7 +640,8 @@
     }
     item({ borderColor: 'var(--ui-chart-status-serious)', background: 'transparent', opacity: 0.8 }, 'bp-sq', 'Unit area without lidar (shaded)');
     item({ borderColor: 'var(--ui-chart-status-good)', background: 'transparent' }, 'bp-sq', 'Forest Service land');
-    item({ borderColor: 'var(--ui-chart-axis)', background: 'transparent', borderStyle: 'dashed' }, 'bp-sq', 'Analysis extent; grey outside the flight');
+    item({ borderColor: 'var(--color-fg)', background: 'repeating-linear-gradient(45deg, rgba(31,36,33,.55) 0 1.5px, rgba(31,36,33,.25) 1.5px 5px)' }, 'bp-sq', 'No 2026 lidar (hatched)');
+    item({ borderColor: 'var(--ui-chart-axis)', background: 'transparent', borderStyle: 'dashed' }, 'bp-sq', 'Analysis extent');
   }
 
   $('#z-in').addEventListener('click', () => zoom && d3.select('#map').transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 2));
@@ -655,7 +660,7 @@
     update();
   };
 
-  const get = (f) => fetch('data/' + f + '?v=7524f00a60').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=20261024b').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });
