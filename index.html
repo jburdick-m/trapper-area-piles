@@ -241,7 +241,11 @@
     ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield']],
     ['g-both', 'Both methods', ['fire_support', 'season_days']],
   ];
+  // dyed off-road diesel from the on-road pump price: take out the state excise (outside the sales tax
+  // base), the on-road diesel sales tax and the federal excise, then add the lower off-road sales tax
+  const offroad = (q) => ((q - S.p.excise_state) / (1 + S.p.sales_onroad / 100) - S.p.excise_fed) * (1 + S.p.sales_offroad / 100);
   const showVal = (a, v) => {
+    if (a.key === 'diesel') return '$' + v.toFixed(2) + '/gal · off-road $' + offroad(v).toFixed(2);
     if (a.key === 'gate_price') return v === 0 ? 'no credit' : (v > 0 ? 'pays $' : 'charges $') + fmt0(Math.abs(v)) + ' /dry t';
     if (a.unit === '$/run-h' || a.unit === '$/h' || a.unit === '$/dry t' || a.unit === '$/day') return '$' + fmt0(v) + ' ' + a.unit.slice(2);
     if (a.unit === '$') return '$' + fmt0(v);
@@ -366,17 +370,18 @@
     // Grind and haul: round trip = drive both ways + 1 h to load and unload; each truck makes as many
     // whole trips as fit in an 11 h driver day (at least one). Working days = the slower of the grinder
     // and the trucks. Cost = (grind + haul) x markup - plant gate payment, + move-ins + fire support.
-    // Diesel: the default rates include fuel at diesel_ref; the diesel price moves only their fuel share
-    // (grinder and loader per productive hour, chip vans per mile plus idling, carbonator and loader per
-    // run-hour, fire support per day, lowboys per move-in).
-    const dF = p.diesel - p.diesel_ref;
+    // Diesel: the default rates include fuel at diesel_ref; the diesel price moves only their fuel share.
+    // Grinder, carbonator and their loaders (per productive or run-hour) burn dyed off-road diesel; chip
+    // vans (per mile plus idling), fire support (per day) and lowboys (per move-in) pay the on-road price.
+    const dRoad = p.diesel - p.diesel_ref;
+    const dOff = offroad(p.diesel) - offroad(p.diesel_ref);
     const tripH = 2 * p.haul_miles / p.haul_speed + 1;
-    const grindPerTon = p.grind_cost + dF * p.grind_gal_h / p.grind_rate;
-    const haulPerTon = (p.truck_rate * tripH + dF * (2 * p.haul_miles / p.truck_mpg + p.truck_idle_gal)) / p.load_bdt;
+    const grindPerTon = p.grind_cost + dOff * p.grind_gal_h / p.grind_rate;
+    const haulPerTon = (p.truck_rate * tripH + dRoad * (2 * p.haul_miles / p.truck_mpg + p.truck_idle_gal)) / p.load_bdt;
     const ghPerTon = (grindPerTon + haulPerTon) * (1 + p.markup / 100) - p.gate_price;
-    const moveIn = dF * p.move_gal;
-    const fireDay = p.fire_support + dF * p.fire_gal_day;
-    const carbHour = p.carb_cost + dF * p.carb_gal_h;
+    const moveIn = dRoad * p.move_gal;
+    const fireDay = p.fire_support + dRoad * p.fire_gal_day;
+    const carbHour = p.carb_cost + dOff * p.carb_gal_h;
     const tripsPerTruckDay = Math.max(1, Math.floor(11 / tripH));
     const calc = (rows) => {
       const T = d3.sum(rows, (d) => d.tons);
@@ -418,7 +423,7 @@
     const root = svg.append('g').attr('class', 'root');
     const hs = DATA.hillshade;
     if (hs) {
-      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024k').attr('x', px(hs.x0)).attr('y', py(hs.y1))
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024m').attr('x', px(hs.x0)).attr('y', py(hs.y1))
         .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
     }
     const fs = L.find((d) => d.kind === 'fsland');
@@ -447,10 +452,10 @@
       .attr('d', (d) => ringsPath(d.g, px, py)).attr('fill', 'none').attr('stroke', (d) => colorOf[d.name]).attr('stroke-width', 2.4).style('pointer-events', 'none');
     root.append('g').attr('class', 'fp').selectAll('path').data(P, (d) => d.id).join('path')
       .attr('d', (d) => ringsPath(d.g, px, py)).attr('fill-rule', 'evenodd').attr('stroke-width', 1.2)
-      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d, true));
+      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d));
     root.append('g').attr('class', 'pts').selectAll('circle').data(P, (d) => d.id).join('circle')
       .attr('cx', (d) => px(d.x)).attr('cy', (d) => py(d.y)).attr('stroke', 'var(--color-bg)').attr('stroke-width', 0.8)
-      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d, true));
+      .on('mousemove', (ev, d) => tipPile(ev, d)).on('mouseleave', hideTip).on('click', (ev, d) => pick(d));
     root.append('circle').attr('class', 'pickring').attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2).attr('r', 0);
     svg.append('g').attr('class', 'scalebar');
     zoom = d3.zoom().scaleExtent([0.6, 400]).on('zoom', (e) => { S.t = e.transform; applyZoom(); });
@@ -497,21 +502,6 @@
     applyZoom();
   }
 
-  function zoomToBox(x0, y0, x1, y1, maxK) {
-    if (!geo || !zoom) return;
-    const { W, H, px, py } = geo;
-    const bw = Math.max(1, px(x1) - px(x0)), bh = Math.max(1, py(y0) - py(y1));
-    const k = Math.min(maxK || 400, 0.8 * Math.min(W / bw, H / bh));
-    const cx = (px(x0) + px(x1)) / 2, cy = (py(y0) + py(y1)) / 2;
-    const t = d3.zoomIdentity.translate(W / 2, H / 2).scale(k).translate(-cx, -cy);
-    d3.select('#map').transition().duration(reduceMotion ? 0 : 650).call(zoom.transform, t);
-  }
-
-  const bbox = (rings) => {
-    const all = rings.flat();
-    return [d3.min(all, (c) => c[0]), d3.min(all, (c) => c[1]), d3.max(all, (c) => c[0]), d3.max(all, (c) => c[1])];
-  };
-
   // ---------------------------------------------------------------- tooltip + picked pile
   const tip = $('#tip');
   function placeTip(ev) {
@@ -541,7 +531,7 @@
   // whole chip-van loads at the scenario's load size: one decimal under 10
   const vanLoads = (d) => { const n = d.tons / S.p.load_bdt; return n < 10 ? fmt1(n) : fmt0(n); };
 
-  function pick(d, zoomTo) {
+  function pick(d) {
     S.picked = d;
     const box = $('#pick');
     box.hidden = false;
@@ -567,11 +557,6 @@
     attrs.id = 'pick-attrs';
     box.append(head, fig, attrs);
     pickAttrs(d);
-    if (zoomTo) {
-      const [a, b, c, e] = bbox(d.g.length ? d.g : [[[d.x, d.y]]]);
-      const pad = Math.max(40, (c - a) * 1.5);
-      zoomToBox(a - pad, b - pad, c + pad, e + pad);
-    }
     applyZoom();
   }
 
@@ -744,11 +729,11 @@
     if (!S.opened) {
       S.opened = true;
       const first = P.find((d) => d.id === 1);
-      if (first) pick(first, false);
+      if (first) pick(first);
     }
   };
 
-  const get = (f) => fetch('data/' + f + '?v=20261024k').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=20261024m').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });
