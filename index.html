@@ -367,8 +367,8 @@
     const W = wrap.clientWidth;
     if (!W) return;
     const ext = L.find((d) => d.kind === 'extent');
-    const xs = ext.g[0].map((c) => c[0]), ys = ext.g[0].map((c) => c[1]);
-    const X0 = d3.min(xs), X1 = d3.max(xs), Y0 = d3.min(ys), Y1 = d3.max(ys);
+    // default and Fit view: the four projects' piles and units, from the lidar's west edge to Graveyard
+    const X0 = 670300, X1 = 683200, Y0 = 4365600, Y1 = 4379200;
     const H = Math.round(Math.max(320, Math.min(W * (Y1 - Y0) / (X1 - X0), 760)));
     const s = Math.min(W / (X1 - X0), H / (Y1 - Y0));
     const ox = (W - (X1 - X0) * s) / 2, oy = (H - (Y1 - Y0) * s) / 2;
