@@ -170,7 +170,7 @@
     <h2>By project</h2>
     <div class="bp-scroll wide">
       <table class="bp-table" id="proj-table">
-        <thead><tr><th>Project</th><th class="n">Piles</th><th class="n">Unit acres</th><th class="n">With lidar</th><th class="n">Dry tons</th><th class="n">Grind and haul</th><th class="n">Carbonator days</th><th class="n">Carbonator cost</th><th class="n">Dry tons, all ground</th><th class="n">Grind and haul, all ground</th><th class="n">Carbonator, all ground</th></tr></thead>
+        <thead><tr><th>Treatment<br>project</th><th class="n">Pile<br>count</th><th class="n">Unit<br>acres</th><th class="n">Lidar<br>coverage</th><th class="n">Dry<br>tons</th><th class="n">Grind and<br>haul</th><th class="n">Carbonator<br>days</th><th class="n">Carbonator<br>cost</th><th class="n">Dry tons,<br>all ground</th><th class="n">Grind and haul,<br>all ground</th><th class="n">Carbonator,<br>all ground</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -315,10 +315,10 @@
         row.append(lab, out, inp);
         box.append(row);
       });
-      if (id === 'g-haul') {
+      if (id === 'g-haul' || id === 'g-carb') {
         const lb = document.createElement('div');
         lb.className = 'bp-load';
-        lb.id = 'load-cost';
+        lb.id = id === 'g-haul' ? 'load-cost' : 'day-cost';
         box.append(lb);
       }
     });
@@ -618,14 +618,14 @@
       const ac = unitAc[r.project] || 0, wl = withL[r.project] || 0;
       const f = 1 + (ac ? 1 - wl / ac : 0);
       all.ac += ac; all.wl += wl; all.T += r.T * f; all.g += r.gcost * f; all.c += r.ccost * f;
-      tr.append(nameCell, td(fmt0(r.n), 1), td(ac ? fmt0(ac) : '—', 1), td(ac ? `${fmt0(wl)} (${fmt0(100 * wl / ac)}%)` : '—', 1),
+      tr.append(nameCell, td(fmt0(r.n), 1), td(ac ? fmt0(ac) : '—', 1), td(ac ? `${fmt0(100 * wl / ac)}%` : '—', 1),
         td(fmt0(r.T), 1), td(r.n ? money(r.gcost) : '—', 1), td(fmt0(r.days), 1), td(r.n ? money(r.ccost) : '—', 1),
         td(fmt0(r.T * f), 1), td(r.n ? money(r.gcost * f) : '—', 1), td(r.n ? money(r.ccost * f) : '—', 1));
       tb.append(tr);
     });
     const tot = document.createElement('tr');
     tot.className = 'tot';
-    tot.append(td('All selected'), td(fmt0(a.n), 1), td(fmt0(all.ac), 1), td(`${fmt0(all.wl)} (${fmt0(100 * all.wl / all.ac)}%)`, 1),
+    tot.append(td('All selected'), td(fmt0(a.n), 1), td(fmt0(all.ac), 1), td(`${fmt0(100 * all.wl / all.ac)}%`, 1),
       td(fmt0(a.T), 1), td(money(a.gcost), 1), td(fmt0(a.days), 1), td(money(a.ccost), 1),
       td(fmt0(all.T), 1), td(money(all.g), 1), td(money(all.c), 1));
     tb.append(tot);
@@ -644,27 +644,37 @@
     if (S.picked) pickAttrs(S.picked);
   }
 
-  // grind-and-haul cost of one chip-van load, by part; shades of one ink, labelled below
+  // grind-and-haul cost of one chip-van load and carbonator cost of one working day, by part
   function loadCost(sc) {
-    const box = document.getElementById('load-cost');
-    if (!box) return;
     const p = S.p, a = sc.all;
     const grind = p.grind_cost * p.load_bdt;
     const haul = sc.haulPerTon * p.load_bdt;
     const markup = (grind + haul) * p.markup / 100;
     const fixed = a.loads ? (a.gcost - a.T * sc.ghPerTon) / a.loads : 0;
     const gate = p.gate_price * p.load_bdt;             // > 0: plant pays (credit), < 0: tipping fee
-    const parts = [['Grind and load', grind, 0.9], ['Haul', haul, 0.65], ['Overhead and profit', markup, 0.42],
-                   ['Move-ins and fire support', fixed, 0.24]];
-    if (gate < 0) parts.push(['Tipping fee', -gate, 0.12]);
-    const gross = d3.sum(parts, (d) => d[1]);
-    const total = gross - Math.max(gate, 0);
+    const parts = [['Grind and load', grind], ['Haul', haul], ['Overhead and profit', markup], ['Move-ins and fire support', fixed]];
+    if (gate < 0) parts.push(['Tipping fee', -gate]);
+    costBar('load-cost', 'Cost per chip-van load', parts, a.loads > 0, Math.max(gate, 0), 'Less plant payment');
+    const run = p.carb_cost * p.carb_hours * p.carb_units;
+    const fire = p.fire_support * p.carb_units;
+    const mob = a.days ? (a.ccost - a.runh * p.carb_cost - p.fire_support * a.days * p.carb_units) / a.days : 0;
+    costBar('day-cost', `Cost per working day (${p.carb_units} machine${p.carb_units > 1 ? 's' : ''})`,
+            [['Carbonator run time', run], ['Fire support', fire], ['Move-ins', mob]], a.days > 0, 0, '');
+  }
+
+  // shades of one ink, labelled below; credit (if any) comes off the total as its own line
+  const SHADES = [0.9, 0.65, 0.42, 0.24, 0.12];
+  function costBar(id, title, parts, ok, credit, creditLabel) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    parts = parts.map((d, i) => [d[0], d[1], SHADES[i]]);
+    const total = d3.sum(parts, (d) => d[1]) - credit;
     const usd = (v) => '$' + fmt0(v);
     box.replaceChildren();
     const head = document.createElement('div');
     head.className = 'lt';
-    const t = document.createElement('span'); t.textContent = 'Cost per chip-van load';
-    const v = document.createElement('b'); v.textContent = a.loads ? usd(total) : '—';
+    const t = document.createElement('span'); t.textContent = title;
+    const v = document.createElement('b'); v.textContent = ok ? usd(total) : '—';
     head.append(t, v);
     const bar = document.createElement('div');
     bar.className = 'bar';
@@ -685,10 +695,10 @@
       bar.append(seg); ul.append(li);
     });
     box.append(head, bar, ul);
-    if (gate > 0) {
+    if (credit > 0) {
       const li = document.createElement('li');
-      const n = document.createElement('span'); n.textContent = 'Less plant payment';
-      const amt = document.createElement('span'); amt.textContent = '−' + usd(gate);
+      const n = document.createElement('span'); n.textContent = creditLabel;
+      const amt = document.createElement('span'); amt.textContent = '−' + usd(credit);
       li.append(document.createElement('i'), n, amt);
       li.firstChild.style.visibility = 'hidden';
       ul.append(li);
