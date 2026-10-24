@@ -6,8 +6,10 @@
  {"key": "vol_adjust", "label": "Lidar volume adjustment", "default": 0, "min": -30, "max": 30, "step": 5, "unit": "%",
   "source": "Measured sampling error ~+/-7% for piles over 40 ft; bias from rough tops, ground disturbance and toe cutoff not measured"},
 
- {"key": "diesel", "label": "Diesel price", "default": 5.00, "min": 3.00, "max": 8.00, "step": 0.10, "unit": "$/gal",
-  "source": "Assumed: the default rates below were priced at about $5.00/gal; the slider changes only their fuel share, using the fuel use below"},
+ {"key": "diesel", "label": "Diesel price", "default": 8.46, "min": 3.00, "max": 10.00, "step": 0.01, "unit": "$/gal",
+  "source": "AAA California average diesel, Oct 24, 2026: $8.46/gal (on-road retail, taxes included). Changes only the fuel share of each rate, using the fuel use below"},
+ {"key": "diesel_ref", "label": "Diesel price in the default rates", "default": 5.00, "min": 5.00, "max": 5.00, "step": 0.01, "unit": "$/gal",
+  "source": "Assumed: the default rates were set when California diesel was about $5 (AAA average $5.12 on Oct 24, 2025)"},
  {"key": "grind_gal_h", "label": "Grinder and loader fuel", "default": 40, "min": 40, "max": 40, "step": 1, "unit": "gal/h",
   "source": "Assumed: ~1,000 hp horizontal grinder ~30-35 gal per productive hour plus grapple loader ~5-8 gal/h"},
  {"key": "truck_mpg", "label": "Chip van fuel economy", "default": 5.5, "min": 5.5, "max": 5.5, "step": 0.5, "unit": "mpg",
