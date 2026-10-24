@@ -177,7 +177,7 @@
   const parseG = (g) => (typeof g === 'string' ? JSON.parse(g) : g || []);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const OUTSIDE = 'outside units';
-  const IMG_V = '20261024h';  // bump when the pile images in data/piles/ are re-rendered
+  const IMG_V = '20261024i';  // bump when the pile images in data/piles/ are re-rendered
 
   const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40,
               t: d3.zoomIdentity, picked: null, show: { fs: true, units: true, proj: true } };
@@ -637,6 +637,12 @@
     const W = $('#mapwrap').clientWidth;
     if (W !== lastW || !geo) { lastW = W; drawMap(); }
     update();
+    // open on the largest pile (Sleighville unit 265) so its 3-D view shows without a click
+    if (!S.opened) {
+      S.opened = true;
+      const first = P.find((d) => d.id === 1);
+      if (first) pick(first, false);
+    }
   };
 
   const get = (f) => fetch('data/' + f + '?v=20261024h').then((r) => {

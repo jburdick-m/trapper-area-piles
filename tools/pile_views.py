@@ -29,7 +29,7 @@ import pdal
 from pyproj import Transformer
 from scipy.interpolate import griddata
 from scipy.spatial import cKDTree
-from scipy.ndimage import median_filter
+from scipy.ndimage import median_filter, grey_opening
 from matplotlib.path import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -250,6 +250,12 @@ def render_one(pile, tile_dir, out_dir):
         H = np.where(inside & np.isfinite(h), np.clip(h, 0, hmax_m + 0.3), 0.0)
         # a 2.5 m median takes out the tree clumps the point filter keeps at the edges
         H = np.where(inside, median_filter(H, size=5, mode='nearest'), 0.0)
+        # optional: knock down narrow spikes (tree clumps on the footprint edge) to the surrounding surface
+        k = int(os.environ.get('DESPIKE', 0))
+        if k:
+            base = grey_opening(H, size=k)
+            H = np.where(H - base > 0.8, base, H)
+            H = np.where(inside, median_filter(H, size=3, mode='nearest'), 0.0)
     vol = float(H.sum() * CELL * CELL)
 
     # ---- figure
