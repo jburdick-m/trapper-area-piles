@@ -41,6 +41,8 @@ P_MIN, DOME_MAX, PASS_MAX, OVER_MAX, GDZ_MIN = 0.85, -0.3, 0.20, 0.12, 2.0
 H90_MIN, HRATIO_MAX, COMPACT_MIN, SINGLE_MIN, PULSES_MIN = 1.5, 0.40, 0.30, 0.6, 20
 STAB_MIN, DIAM_MIN, DIAM_MAX = 0.7, 30.0, 40.0
 DRAWS = int(os.environ.get('DRAWS', 10))
+MIN_Y = float(os.environ.get('MIN_Y', 0))          # only piles north of this (a strip added later)
+ID_START = int(os.environ.get('ID_START', 1001))
 # detected / mapped, by pulses on the pile: area (median), volume (5th, 50th, 95th percentile)
 CALIB = [(10, 30, 0.850, 0.431, 0.731, 1.025), (30, 60, 0.732, 0.448, 0.688, 1.066),
          (60, 120, 0.838, 0.434, 0.741, 1.328), (120, 250, 0.904, 0.541, 0.859, 1.157),
@@ -130,7 +132,7 @@ def detect_tile(tile):
                 diag.append(r)
             continue
         project, unit = unit_of(r['x'], r['y'], _W['polys'])
-        if project is None:
+        if project is None or r['y'] < MIN_Y:
             continue
         a, v05, v50, v95 = calib(r['n_first'])
         r['area_cal'] = r['area_m2'] / a
@@ -189,7 +191,7 @@ def merge(piles_fn, out_dir, new_fn):
     new = []
     for i, r in enumerate(adds):
         new.append({
-            'pile_id': 1001 + i, 'project': r['project'], 'unit': r['unit'],
+            'pile_id': ID_START + i, 'project': r['project'], 'unit': r['unit'],
             'basis': 'open_2022' if r['chm22_p50'] < 2 else 'canopy_removed',
             'size_cls': 'medium 30-40ft' if r['diam_cal'] < DIAM_MAX else 'large 40ft+',
             'area_m2': round(r['area_cal'], 1), 'diam_ft': round(r['diam_cal'], 1), 'hmax_ft': round(r['hmax_m'] / pf.FT, 1),
