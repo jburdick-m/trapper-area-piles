@@ -77,6 +77,18 @@
   .bp-sl output { font-variant-numeric: tabular-nums; color: var(--color-fg); text-align: right; }
   .bp-sl input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--color-fg); }
   .bp-sl select.bp-dest { grid-column: 1 / -1; width: 100%; font: inherit; }
+  .bp-load { display: flex; flex-direction: column; gap: var(--ui-gap-xs); font-size: var(--ui-font-size-caption); margin-top: var(--ui-gap-xs); }
+  .bp-load .lt { display: flex; justify-content: space-between; gap: var(--ui-gap-sm); }
+  .bp-load .lt b { font-weight: var(--ui-font-weight-medium); font-variant-numeric: tabular-nums; }
+  .bp-load .bar { display: flex; gap: 2px; height: 12px; }
+  .bp-load .bar span { height: 100%; min-width: 2px; background: var(--color-fg); }
+  .bp-load .bar span:first-child { border-radius: 4px 0 0 4px; }
+  .bp-load .bar span:last-child { border-radius: 0 4px 4px 0; }
+  .bp-load .bar span.on { outline: 2px solid var(--color-fg); outline-offset: 1px; }
+  .bp-load ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .bp-load li { display: flex; align-items: center; gap: var(--ui-gap-xs); }
+  .bp-load li i { width: 0.7rem; height: 0.7rem; border-radius: 2px; background: var(--color-fg); flex: none; }
+  .bp-load li span:last-child { margin-left: auto; color: var(--color-fg); }
   .bp-checks { display: flex; flex-direction: column; gap: var(--ui-gap-xs); font-size: var(--ui-font-size-caption); }
   .bp-checks label { display: flex; gap: var(--ui-gap-xs); align-items: center; cursor: pointer; }
   .bp details { font-size: var(--ui-font-size-caption); color: var(--color-fg-muted); }
@@ -294,6 +306,12 @@
         row.append(lab, out, inp);
         box.append(row);
       });
+      if (id === 'g-haul') {
+        const lb = document.createElement('div');
+        lb.className = 'bp-load';
+        lb.id = 'load-cost';
+        box.append(lb);
+      }
     });
     const pc = $('#proj-checks');
     pc.replaceChildren();
@@ -609,9 +627,61 @@
     allLine($('#k-gcost-all'), all.g);
     allLine($('#k-ccost-all'), all.c);
 
+    loadCost(sc);
     legend();
     stylePiles();
     if (S.picked) pickAttrs(S.picked);
+  }
+
+  // grind-and-haul cost of one chip-van load, by part; shades of one ink, labelled below
+  function loadCost(sc) {
+    const box = document.getElementById('load-cost');
+    if (!box) return;
+    const p = S.p, a = sc.all;
+    const grind = p.grind_cost * p.load_bdt;
+    const haul = sc.haulPerTon * p.load_bdt;
+    const markup = (grind + haul) * p.markup / 100;
+    const fixed = a.loads ? (a.gcost - a.T * sc.ghPerTon) / a.loads : 0;
+    const gate = p.gate_price * p.load_bdt;             // > 0: plant pays (credit), < 0: tipping fee
+    const parts = [['Grind and load', grind, 0.9], ['Haul', haul, 0.65], ['Overhead and profit', markup, 0.42],
+                   ['Move-ins and fire support', fixed, 0.24]];
+    if (gate < 0) parts.push(['Tipping fee', -gate, 0.12]);
+    const gross = d3.sum(parts, (d) => d[1]);
+    const total = gross - Math.max(gate, 0);
+    const usd = (v) => '$' + fmt0(v);
+    box.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'lt';
+    const t = document.createElement('span'); t.textContent = 'Cost per chip-van load';
+    const v = document.createElement('b'); v.textContent = a.loads ? usd(total) : '—';
+    head.append(t, v);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', 'Cost per load: ' + parts.map((d) => `${d[0]} ${usd(d[1])}`).join(', '));
+    const ul = document.createElement('ul');
+    parts.forEach(([name, val, op]) => {
+      const seg = document.createElement('span');
+      seg.style.flex = `${Math.max(val, 0)} 0 0`;
+      seg.style.opacity = op;
+      const li = document.createElement('li');
+      const sw = document.createElement('i'); sw.style.opacity = op;
+      const n = document.createElement('span'); n.textContent = name;
+      const amt = document.createElement('span'); amt.textContent = usd(val);
+      li.append(sw, n, amt);
+      const on = (x) => { seg.classList.toggle('on', x); li.style.color = x ? 'var(--color-fg)' : ''; };
+      [seg, li].forEach((el) => { el.addEventListener('mouseenter', () => on(true)); el.addEventListener('mouseleave', () => on(false)); });
+      bar.append(seg); ul.append(li);
+    });
+    box.append(head, bar, ul);
+    if (gate > 0) {
+      const li = document.createElement('li');
+      const n = document.createElement('span'); n.textContent = 'Less plant payment';
+      const amt = document.createElement('span'); amt.textContent = '−' + usd(gate);
+      li.append(document.createElement('i'), n, amt);
+      li.firstChild.style.visibility = 'hidden';
+      ul.append(li);
+    }
   }
 
   function legend() {
