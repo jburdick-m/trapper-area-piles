@@ -4,7 +4,7 @@ Live site: https://jburdick-m.github.io/trapper-area-piles/
 
 Interactive map and disposal planner for the large burn piles left by fuels treatments in the Pike-Magnus, Graveyard, Sleighville and Alaska Peak units, Tahoe National Forest.
 
-The page maps 210 piles 40 ft and wider: 205 from the first pass and 5 the automated pass below found that it missed. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures add each project's unflown share of unit acres to its flown totals (flown × (1 + unflown fraction)), a simple allowance for piles outside the 2026 lidar.
+The page maps 212 piles 40 ft and wider: 205 from the first pass and 7 the automated pass below found that it missed, 2 of them in NE Sleighville units (322 and 666) that were flown in Feb 2026 but lay north of the first pass's analysis extent. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures add each project's unflown share of unit acres to its flown totals (flown × (1 + unflown fraction)), a simple allowance for piles outside the 2026 lidar.
 
 ## Data
 
@@ -70,6 +70,8 @@ The Feb 2026 flight is sparse where the piles are (0.8–2.2 returns per m² ove
 - Footprint area and volume are corrected for this detector reading low on sparsely sampled piles (detected/mapped medians of 0.73–0.93 for area and 0.69–0.91 for volume, by pulses on the pile), with a 90% range from the spread of that ratio.
 
 Validation on the test tiles: the cluster stage finds 146 of the 148 mapped piles; the full rule set keeps 63% of them (77% of piles with 200+ pulses, 12–35% of piles with 20–50 pulses) and makes no detections on a pile-free tile. Reviewed by eye from return profiles, 17 of the 18 additions are clean mounds 2–4 m tall; pile 1001 (Graveyard unit 103, 110 ft) is a large irregular mound with a lower tail, possibly a landing deck or two piles together, and is the one to field-check first.
+
+The first pass and the view tiles stopped at 4,377,141 N, but six NE Sleighville units (316, 319, 322, 431, 666, 777; about 290 flown acres) run north of that. `tools/extend_tiles.py` cut tiles for that strip from the raw Feb ASO tile, aligned to the existing tiles by matching 14 million identical pulses (shift known to 1 mm horizontally, 7 cm vertically), and `tools/extend_vm.sh` ran the same detection there. It found two large piles (1019, 1020) and a low S-shaped band 1–2 m high in unit 322 (more likely road or landing fill than slash, left out). Those six units are now counted as fully flown.
 
 `tools/pile_detect_vm.sh` runs the whole pass on a us-west1 VM (about 5 minutes on 22 cores); inputs, per-tile results and the training table are in `gs://aso-august-w1/pc_work_10212026/pile_detect/`, and the validation scripts and scored clusters in its `validation/` folder.
 
