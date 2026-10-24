@@ -600,21 +600,22 @@
     $('#k-char').textContent = fmt0(a.char) + ' t';
     $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
 
-    // by project. "All ground": each project's flown totals plus its unflown share of unit
-    // ground, i.e. x (1 + unflown fraction), unflown = unit acres without Feb 2026 lidar.
+    // by project. "All ground": each project's flown totals carried onto its unflown unit acres at the
+    // same piles per acre, i.e. x (unit acres / flown acres), flown = unit acres under the Feb 2026 lidar.
     const tb = $('#proj-table tbody');
     tb.replaceChildren();
     const unitAc = {}, withL = {};
     U.forEach((u) => { unitAc[u.project] = (unitAc[u.project] || 0) + u.acres; withL[u.project] = (withL[u.project] || 0) + u.acres * u.lidar / 100; });
-    const all = { ac: 0, wl: 0, T: 0, g: 0, c: 0 };
+    const all = { ac: 0, wl: 0, T: 0, g: 0, c: 0, sac: 0, swl: 0 };
     sc.byProject.forEach((r) => {
       const tr = document.createElement('tr');
       const nameCell = td(r.project === OUTSIDE ? 'Outside the four unit layers' : r.project);
       const sw = document.createElement('span'); sw.className = 'bp-sw'; sw.style.background = colorOf[r.project]; sw.style.marginRight = '6px';
       nameCell.prepend(sw);
       const ac = unitAc[r.project] || 0, wl = withL[r.project] || 0;
-      const f = 1 + (ac ? 1 - wl / ac : 0);
-      all.ac += ac; all.wl += wl; all.T += r.T * f; all.g += r.gcost * f; all.c += r.ccost * f;
+      const f = wl > 0 ? ac / wl : 1;
+      all.ac += ac; all.wl += wl;
+      if (S.projects.has(r.project)) { all.sac += ac; all.swl += wl; } all.T += r.T * f; all.g += r.gcost * f; all.c += r.ccost * f;
       tr.append(nameCell, td(fmt0(r.n), 1), td(ac ? fmt0(ac) : '—', 1), td(ac ? `${fmt0(100 * wl / ac)}%` : '—', 1),
         td(fmt0(r.T), 1), td(r.n ? money(r.gcost) : '—', 1), td(fmt0(r.days), 1), td(r.n ? money(r.ccost) : '—', 1),
         td(fmt0(r.T * f), 1), td(r.n ? money(r.gcost * f) : '—', 1), td(r.n ? money(r.ccost * f) : '—', 1));
@@ -626,11 +627,11 @@
       td(fmt0(a.T), 1), td(money(a.gcost), 1), td(fmt0(a.days), 1), td(money(a.ccost), 1),
       td(fmt0(all.T), 1), td(money(all.g), 1), td(money(all.c), 1));
     tb.append(tot);
-    const addPct = a.T ? 100 * (all.T / a.T - 1) : 0;
+    const unflown = all.sac ? 100 * (1 - all.swl / all.sac) : 0;
     const allLine = (el, v) => {
       const b = document.createElement('b');
       b.textContent = money(v);
-      el.replaceChildren('All project ground: ', b, ` (+${fmt0(addPct)}% unflown, ${fmt0(all.T)} dry t)`);
+      el.replaceChildren('All project ground: ', b, ` (${fmt0(unflown)}% unflown)`);
     };
     allLine($('#k-gcost-all'), all.g);
     allLine($('#k-ccost-all'), all.c);

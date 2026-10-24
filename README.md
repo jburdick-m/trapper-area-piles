@@ -4,7 +4,7 @@ Live site: https://jburdick-m.github.io/trapper-area-piles/
 
 Interactive map and disposal planner for the large burn piles left by fuels treatments in the Pike-Magnus, Graveyard, Sleighville and Alaska Peak units, Tahoe National Forest.
 
-The page maps 212 piles 40 ft and wider: 205 from the first pass and 7 the automated pass below found that it missed, 2 of them in NE Sleighville units (322 and 666) that were flown in Feb 2026 but lay north of the first pass's analysis extent. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures add each project's unflown share of unit acres to its flown totals (flown × (1 + unflown fraction)), a simple allowance for piles outside the 2026 lidar.
+The page maps 212 piles 40 ft and wider: 205 from the first pass and 7 the automated pass below found that it missed, 2 of them in NE Sleighville units (322 and 666) that were flown in Feb 2026 but lay north of the first pass's analysis extent. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures carry each project's flown totals onto its unflown unit acres at the same piles per acre (flown × unit acres / flown acres), an allowance for piles outside the 2026 lidar; 33% of unit acres were not flown.
 
 ## Data
 
