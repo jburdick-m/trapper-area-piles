@@ -125,8 +125,6 @@
     <div class="bp-kpi"><span class="kl">Dry tons</span><span class="kv" id="k-tons">—</span><span class="ks" id="k-tons-s"></span></div>
     <div class="bp-kpi"><span class="kl">Grind and haul cost</span><span class="kv" id="k-gcost">—</span><span class="ks" id="k-gcost-s"></span><span class="ka" id="k-gcost-all"></span></div>
     <div class="bp-kpi"><span class="kl">Carbonator cost</span><span class="kv" id="k-ccost">—</span><span class="ks" id="k-ccost-s"></span><span class="ka" id="k-ccost-all"></span></div>
-    <div class="bp-kpi"><span class="kl">Carbonator time</span><span class="kv" id="k-days">—</span><span class="ks" id="k-days-s"></span></div>
-    <div class="bp-kpi"><span class="kl">Biochar made</span><span class="kv" id="k-char">—</span><span class="ks" id="k-char-s"></span></div>
   </div>
 
   <div class="bp-main">
@@ -589,16 +587,12 @@
     $('#k-piles-s').textContent = `of ${fmt0(P.length)} piles 40 ft+`;
     $('#k-tons').textContent = fmt0(a.T);
     $('#k-tons-s').textContent = `range ${fmt0(a.lo)}–${fmt0(a.hi)} (packing 0.15–0.25)`;
-    $('#k-days').textContent = fmt0(a.days) + ' days';
-    $('#k-days-s').textContent = `${fmt1(a.seasons)} seasons · ${S.p.carb_units} machine${S.p.carb_units > 1 ? 's' : ''} · ${fmt0(a.runh)} run-h`;
     $('#k-ccost').textContent = money(a.ccost);
     $('#g-haul-total').textContent = a.n ? money(a.gcost) : '—';
     $('#g-carb-total').textContent = a.n ? money(a.ccost) : '—';
-    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton` : '';
+    $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton · ~${fmt0(a.days)} working days (${fmt1(a.seasons)} seasons), ${S.p.carb_units}\u00a0machine${S.p.carb_units > 1 ? 's' : ''} · ${fmt0(a.char)} t biochar` : '';
     $('#k-gcost').textContent = money(a.gcost);
     $('#k-gcost-s').textContent = a.T ? `$${fmt0(a.gcost / a.T)} per dry ton · ${fmt0(a.loads)} loads, ${S.p.haul_miles} mi · ~${fmt0(a.gdays)} working days (${fmt1(a.gdays / S.p.season_days)} seasons)` : '';
-    $('#k-char').textContent = fmt0(a.char) + ' t';
-    $('#k-char-s').textContent = `${S.p.biochar_yield}% of dry input`;
 
     // by project. "All ground": each project's flown totals carried onto its unflown unit acres at the
     // same piles per acre, i.e. x (unit acres / flown acres), flown = unit acres under the Feb 2026 lidar.
@@ -719,7 +713,7 @@
   let lastW = 0;
   const render = () => {
     if (!prep()) {
-      ['#k-piles', '#k-tons', '#k-days', '#k-ccost', '#k-gcost', '#k-char'].forEach((s) => { $(s).textContent = '—'; });
+      ['#k-piles', '#k-tons', '#k-ccost', '#k-gcost'].forEach((s) => { $(s).textContent = '—'; });
       return;
     }
     if (!S.built) buildControls();
