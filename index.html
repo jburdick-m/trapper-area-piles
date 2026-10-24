@@ -48,8 +48,7 @@
   @media (max-width: 900px) { .bp-main { grid-template-columns: minmax(0, 1fr); } }
   .bp-maptools { display: flex; flex-wrap: wrap; gap: var(--ui-gap-sm) var(--ui-gap-md); margin: var(--ui-gap-md) 0 var(--ui-gap-sm); font-size: var(--ui-font-size-caption); align-items: center; }
   .bp-maptools label { display: inline-flex; gap: var(--ui-gap-xs); align-items: center; cursor: pointer; }
-  .bp-maptools select { font: inherit; }
-  .bp-mapwrap { position: relative; border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); overflow: hidden; background: var(--color-bg); min-height: 20rem; }
+    .bp-mapwrap { position: relative; border: 1px solid var(--color-border-line); border-radius: var(--ui-radius); overflow: hidden; background: var(--color-bg); min-height: 20rem; }
   .bp-mapwrap svg { display: block; width: 100%; cursor: grab; touch-action: none; }
   .bp-mapwrap svg:active { cursor: grabbing; }
   .bp-mapwrap path, .bp-mapwrap circle { vector-effect: non-scaling-stroke; }
@@ -123,12 +122,6 @@
         <label><input type="checkbox" id="lyr-fs" checked> Forest Service land</label>
         <label><input type="checkbox" id="lyr-units" checked> Units</label>
         <label><input type="checkbox" id="lyr-proj" checked> Project boundaries</label>
-        <label>Color piles by
-          <select id="color-by" aria-label="Color piles by">
-            <option value="project">project</option>
-            <option value="basis">detection basis</option>
-          </select>
-        </label>
       </div>
       <div class="bp-mapwrap" id="mapwrap">
         <svg id="map" role="img" aria-label="Map of burn piles, treatment units and lidar coverage"></svg>
@@ -188,7 +181,7 @@
   const OUTSIDE = 'outside units';
   const IMG_V = '20261024';  // bump when the pile images in data/piles/ are re-rendered
 
-  const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40, colorBy: 'project',
+  const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40,
               t: d3.zoomIdentity, picked: null, show: { fs: true, units: true, proj: true } };
   let P = null, U = null, L = null, A = null, geo = null, zoom = null, projList = [], colorOf = {};
 
@@ -326,7 +319,6 @@
   }
 
   $('#f-mindiam').addEventListener('input', (e) => { S.minDiam = Number(e.target.value); $('#o-mindiam').textContent = S.minDiam + ' ft'; update(); });
-  $('#color-by').addEventListener('change', (e) => { S.colorBy = e.target.value; update(); });
   $('#reset').addEventListener('click', () => {
     Object.assign(S.p, S.defaults);
     A.forEach((a) => { const i = document.getElementById('s-' + a.key); if (i) i.value = a.def; const o = document.getElementById('o-' + a.key); if (o) o.textContent = showVal(a, a.def); });
@@ -370,7 +362,7 @@
   // ---------------------------------------------------------------- map
   const ringsPath = (rings, px, py) => rings.map((r) => 'M' + r.map(([x, y]) => px(x).toFixed(1) + ',' + py(y).toFixed(1)).join('L') + 'Z').join('');
   const radius = (t) => Math.max(2.5, Math.min(15, Math.sqrt(Math.max(t, 0)) * 0.22));
-  const pileColor = (d) => (S.colorBy === 'basis' ? (d.basis === 'open_2022' ? 'var(--ui-chart-status-warning)' : COLORS[0]) : colorOf[d.project]);
+  const pileColor = (d) => colorOf[d.project];
 
   function drawMap() {
     const wrap = $('#mapwrap');
@@ -631,12 +623,7 @@
     const lg = $('#legend');
     lg.replaceChildren();
     const item = (swStyle, cls, text) => { const s = document.createElement('span'); const sw = document.createElement('span'); sw.className = cls; Object.assign(sw.style, swStyle); const t = document.createElement('span'); t.textContent = text; s.append(sw, t); lg.append(s); };
-    if (S.colorBy === 'basis') {
-      item({ background: COLORS[0] }, 'bp-sw', 'Canopy removed since 2022');
-      item({ background: 'var(--ui-chart-status-warning)' }, 'bp-sw', 'On ground open in 2022 (check)');
-    } else {
-      projList.forEach((p) => item({ background: colorOf[p] }, 'bp-sw', p === OUTSIDE ? 'Outside unit layers' : p));
-    }
+    projList.forEach((p) => item({ background: colorOf[p] }, 'bp-sw', p === OUTSIDE ? 'Outside unit layers' : p));
     item({ borderColor: 'var(--ui-chart-status-serious)', background: 'transparent', opacity: 0.8 }, 'bp-sq', 'Unit area without lidar (shaded)');
     item({ borderColor: 'var(--ui-chart-status-good)', background: 'transparent' }, 'bp-sq', 'Forest Service land');
     item({ borderColor: 'var(--color-fg)', background: 'repeating-linear-gradient(45deg, rgba(31,36,33,.55) 0 1.5px, rgba(31,36,33,.25) 1.5px 5px)' }, 'bp-sq', 'No 2026 lidar (hatched)');
