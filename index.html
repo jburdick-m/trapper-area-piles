@@ -143,8 +143,9 @@
         <div class="bp-checks" id="proj-checks"></div>
         <div class="bp-sl">
           <label for="f-mindiam">Smallest pile counted</label><output id="o-mindiam" for="f-mindiam">40 ft</output>
-          <input type="range" id="f-mindiam" min="40" max="120" step="5" value="40">
+          <input type="range" id="f-mindiam" min="30" max="120" step="5" value="40">
         </div>
+        <p class="bp-note" id="added-note">Hollow piles were found by a second, automated pass over the 2026 lidar. They are lower confidence, and below 40 ft they are a partial count: the flight is too sparse to find every small pile.</p>
       </div>
       <div class="bp-group" id="g-tons"></div>
       <div class="bp-group" id="g-haul"></div>
@@ -189,7 +190,7 @@
     if (!DATA.piles) return false;
     const dp = { data: DATA.piles }, du = { data: DATA.units }, dl = { data: DATA.layers }, da = { data: DATA.assumptions };
     if (!P || P.src !== dp.data) {
-      P = dp.data.map((r) => ({ r, id: Number(r.pile_id), project: r.project, unit: r.unit || '', basis: r.basis,
+      P = dp.data.map((r) => ({ r, id: Number(r.pile_id), project: r.project, unit: r.unit || '', basis: r.basis, added: !!r.added,
         diam: Number(r.diam_ft), hmax: Number(r.hmax_ft), vol: Number(r.vol_m3), area: Number(r.area_m2),
         ci: Number(r.ci95_pct), vlo: Number(r.vol_lo95), vhi: Number(r.vol_hi95),
         x: Number(r.x), y: Number(r.y), g: parseG(r.geom), tons: 0 }));
@@ -431,9 +432,9 @@
     svg.select('#nolidar').attr('patternTransform', `rotate(45) scale(${1 / k})`);
     // footprints fade in as a 20 m pile reaches ~8 px; dots shrink to markers once footprints are clear
     const fpOn = Math.max(0, Math.min(1, (k - 2.5) / 3));
-    svg.selectAll('g.fp path').attr('fill-opacity', 0.55 * fpOn).attr('stroke-opacity', fpOn).style('display', fpOn > 0 ? null : 'none');
+    svg.selectAll('g.fp path').attr('fill-opacity', (d) => (d.added ? 0.12 : 0.55) * fpOn).attr('stroke-opacity', fpOn).style('display', fpOn > 0 ? null : 'none');
     svg.selectAll('g.pts circle').attr('r', (d) => (fpOn >= 1 ? 2.2 : radius(d.tons)) / k)
-      .attr('fill-opacity', fpOn >= 1 ? 0.9 : 0.85).attr('stroke-width', 0.8);
+      .attr('fill-opacity', fpOn >= 1 ? 0.9 : 0.85).attr('stroke-width', (d) => (d.added ? 1.6 : 0.8));
     if (S.picked) svg.select('.pickring').attr('cx', geo.px(S.picked.x)).attr('cy', geo.py(S.picked.y)).attr('r', (radius(S.picked.tons) + 5) / k);
     const mPerPx = 1 / (geo.s * k);
     const target = mPerPx * 100;
@@ -456,8 +457,11 @@
 
   function stylePiles() {
     const svg = d3.select('#map');
-    svg.selectAll('g.pts circle').attr('fill', pileColor).style('display', (d) => (d.sel ? null : 'none'));
-    svg.selectAll('g.fp path').attr('fill', pileColor).attr('stroke', pileColor).style('visibility', (d) => (d.sel ? null : 'hidden'));
+    // piles from the automated pass are drawn hollow, their footprints dashed
+    svg.selectAll('g.pts circle').attr('fill', (d) => (d.added ? 'var(--color-panel)' : pileColor(d)))
+      .attr('stroke', (d) => (d.added ? pileColor(d) : 'var(--color-bg)')).style('display', (d) => (d.sel ? null : 'none'));
+    svg.selectAll('g.fp path').attr('fill', pileColor).attr('stroke', pileColor).attr('stroke-dasharray', (d) => (d.added ? '3 2' : null))
+      .style('visibility', (d) => (d.sel ? null : 'hidden'));
     applyZoom();
   }
 
@@ -493,7 +497,9 @@
     if (!d.sel) return;
     tipLines([`Pile ${d.id} · ${d.project}${d.unit ? ' unit ' + d.unit : ''}`,
       `${fmt0(d.diam)} ft across, ${fmt0(d.hmax)} ft tall`,
-      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`]);
+      d.added ? `${fmt0(d.vol)} m³ gross (${fmt0(d.vlo)}–${fmt0(d.vhi)}, 90%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`
+        : `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`,
+      ...(d.added ? ['Found by the automated pass: lower confidence'] : [])]);
     placeTip(ev);
   }
   function tipUnit(ev, u) {
@@ -548,7 +554,9 @@
     box.replaceChildren();
     [['Footprint', `${fmt0(d.area)} m² (${d3.format('.2f')(d.area / 4046.86)} ac)`], ['Diameter', `${fmt0(d.diam)} ft`],
      ['Height', `${fmt0(d.hmax)} ft`], ['Gross volume', `${fmt0(d.vol)} m³ (${fmt0(d.vol * 1.30795)} yd³)`],
-     ['Sampling 95% interval', `${fmt0(d.vlo)}–${fmt0(d.vhi)} m³ (±${fmt1(d.ci)}%)`],
+     d.added ? ['Volume range (90%)', `${fmt0(d.vlo)}–${fmt0(d.vhi)} m³`]
+       : ['Sampling 95% interval', `${fmt0(d.vlo)}–${fmt0(d.vhi)} m³ (±${fmt1(d.ci)}%)`],
+     ...(d.added ? [['Confidence', `lower: automated pass, pile probability ${fmt0(100 * Number(d.r.p_pile))}%, found again in ${fmt0(10 * Number(d.r.stability))} of 10 half-density redraws, ${fmt0(Number(d.r.n_pulses))} lidar pulses on it`]] : []),
      ['Dry tons (scenario)', fmt0(d.tons)],
      ['Chip-van loads', `${vanLoads(d)} at ${S.p.load_bdt} dry t each`],
      ['Carbonator hours', fmt1(d.tons / S.p.carb_rate)]].forEach(([k, v]) => {
@@ -567,7 +575,10 @@
     const sc = scenario();
     const a = sc.all;
     $('#k-piles').textContent = fmt0(a.n);
-    $('#k-piles-s').textContent = `of ${fmt0(P.length)} piles 40 ft+ in the units`;
+    const inSize = P.filter((d) => d.diam >= S.minDiam);
+    const nAdded = a.n ? P.filter((d) => d.sel && d.added).length : 0;
+    $('#k-piles-s').textContent = `of ${fmt0(inSize.length)} piles ${S.minDiam} ft+ in the units`
+      + (nAdded ? ` · ${fmt0(nAdded)} from the automated pass (lower confidence)` : '');
     $('#k-tons').textContent = fmt0(a.T);
     $('#k-tons-s').textContent = `range ${fmt0(a.lo)}–${fmt0(a.hi)} (packing 0.15–0.25)`;
     $('#k-days').textContent = fmt0(a.days) + ' days';
@@ -624,6 +635,7 @@
     lg.replaceChildren();
     const item = (swStyle, cls, text) => { const s = document.createElement('span'); const sw = document.createElement('span'); sw.className = cls; Object.assign(sw.style, swStyle); const t = document.createElement('span'); t.textContent = text; s.append(sw, t); lg.append(s); };
     projList.forEach((p) => item({ background: colorOf[p] }, 'bp-sw', p === OUTSIDE ? 'Outside unit layers' : p));
+    if (P && P.some((d) => d.added && d.sel)) item({ background: 'var(--color-panel)', border: '1.6px solid var(--color-fg-muted)' }, 'bp-sw', 'Automated pass, lower confidence (hollow)');
     item({ borderColor: 'var(--ui-chart-status-serious)', background: 'transparent', opacity: 0.8 }, 'bp-sq', 'Unit area without lidar (shaded)');
     item({ borderColor: 'var(--ui-chart-status-good)', background: 'transparent' }, 'bp-sq', 'Forest Service land');
     item({ borderColor: 'var(--color-fg)', background: 'repeating-linear-gradient(45deg, rgba(31,36,33,.55) 0 1.5px, rgba(31,36,33,.25) 1.5px 5px)' }, 'bp-sq', 'No 2026 lidar (hatched)');
