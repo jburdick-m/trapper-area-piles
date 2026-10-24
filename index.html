@@ -180,7 +180,7 @@
   const parseG = (g) => (typeof g === 'string' ? JSON.parse(g) : g || []);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const OUTSIDE = 'outside units';
-  const IMG_V = '20261024';  // bump when the pile images in data/piles/ are re-rendered
+  const IMG_V = '20261024c';  // bump when the pile images in data/piles/ are re-rendered
 
   const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40,
               t: d3.zoomIdentity, picked: null, show: { fs: true, units: true, proj: true } };
@@ -382,7 +382,7 @@
     const root = svg.append('g').attr('class', 'root');
     const hs = DATA.hillshade;
     if (hs) {
-      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024b').attr('x', px(hs.x0)).attr('y', py(hs.y1))
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024c').attr('x', px(hs.x0)).attr('y', py(hs.y1))
         .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
     }
     const fs = L.find((d) => d.kind === 'fsland');
@@ -658,7 +658,7 @@
     update();
   };
 
-  const get = (f) => fetch('data/' + f + '?v=20261024b').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=20261024c').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });
