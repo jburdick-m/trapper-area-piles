@@ -138,7 +138,6 @@
     <aside class="bp-card bp-controls" id="controls">
       <h2>Scenario</h2>
       <div class="bp-group" id="g-filter">
-        <h3>Which piles</h3>
         <div class="bp-checks" id="proj-checks"></div>
         <div class="bp-sl">
           <label for="f-mindiam">Smallest pile counted</label><output id="o-mindiam" for="f-mindiam">40 ft</output>
@@ -178,7 +177,7 @@
   const parseG = (g) => (typeof g === 'string' ? JSON.parse(g) : g || []);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const OUTSIDE = 'outside units';
-  const IMG_V = '20261024d';  // bump when the pile images in data/piles/ are re-rendered
+  const IMG_V = '20261024e';  // bump when the pile images in data/piles/ are re-rendered
 
   const S = { p: {}, defaults: {}, built: false, projects: new Set(), minDiam: 40,
               t: d3.zoomIdentity, picked: null, show: { fs: true, units: true, proj: true } };
@@ -380,7 +379,7 @@
     const root = svg.append('g').attr('class', 'root');
     const hs = DATA.hillshade;
     if (hs) {
-      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024d').attr('x', px(hs.x0)).attr('y', py(hs.y1))
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024e').attr('x', px(hs.x0)).attr('y', py(hs.y1))
         .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
     }
     const fs = L.find((d) => d.kind === 'fsland');
@@ -400,10 +399,9 @@
       root.append('path').attr('class', 'nolidar-hatch').attr('d', d).attr('fill-rule', 'evenodd').attr('fill', 'url(#nolidar)').attr('stroke', 'none');
       root.append('path').attr('d', ringsPath(cov.g, px, py)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.2).attr('stroke-opacity', 0.7);
     }
-    root.append('path').attr('d', ringsPath(ext.g, px, py)).attr('fill', 'none').attr('stroke', 'var(--ui-chart-axis)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1);
     root.append('g').attr('class', 'lyr-units').selectAll('path').data(U).join('path')
       .attr('d', (u) => ringsPath(u.g, px, py)).attr('fill-rule', 'evenodd')
-      .attr('fill', 'var(--ui-chart-status-serious)').attr('fill-opacity', (u) => 0.5 * (1 - u.lidar / 100))
+      .attr('fill', 'var(--ui-chart-status-serious)').attr('fill-opacity', 0)
       .attr('stroke', (u) => colorOf[u.project]).attr('stroke-width', 0.7).attr('stroke-opacity', 0.9)
       .on('mousemove', (ev, u) => tipUnit(ev, u)).on('mouseleave', hideTip);
     root.append('g').attr('class', 'lyr-proj').selectAll('path').data(L.filter((d) => d.kind === 'project')).join('path')
@@ -566,7 +564,7 @@
     const sc = scenario();
     const a = sc.all;
     $('#k-piles').textContent = fmt0(a.n);
-    $('#k-piles-s').textContent = `of ${fmt0(P.length)} piles 40 ft+ in the units`;
+    $('#k-piles-s').textContent = `of ${fmt0(P.length)} piles 40 ft+`;
     $('#k-tons').textContent = fmt0(a.T);
     $('#k-tons-s').textContent = `range ${fmt0(a.lo)}–${fmt0(a.hi)} (packing 0.15–0.25)`;
     $('#k-days').textContent = fmt0(a.days) + ' days';
@@ -623,10 +621,8 @@
     lg.replaceChildren();
     const item = (swStyle, cls, text) => { const s = document.createElement('span'); const sw = document.createElement('span'); sw.className = cls; Object.assign(sw.style, swStyle); const t = document.createElement('span'); t.textContent = text; s.append(sw, t); lg.append(s); };
     projList.forEach((p) => item({ background: colorOf[p] }, 'bp-sw', p === OUTSIDE ? 'Outside unit layers' : p));
-    item({ borderColor: 'var(--ui-chart-status-serious)', background: 'transparent', opacity: 0.8 }, 'bp-sq', 'Unit area without lidar (shaded)');
     item({ borderColor: 'var(--ui-chart-status-good)', background: 'transparent' }, 'bp-sq', 'Forest Service land');
     item({ borderColor: 'var(--color-fg)', background: 'repeating-linear-gradient(45deg, rgba(31,36,33,.55) 0 1.5px, rgba(31,36,33,.25) 1.5px 5px)' }, 'bp-sq', 'No 2026 lidar (hatched)');
-    item({ borderColor: 'var(--ui-chart-axis)', background: 'transparent', borderStyle: 'dashed' }, 'bp-sq', 'Analysis extent');
   }
 
   $('#z-in').addEventListener('click', () => zoom && d3.select('#map').transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 2));
@@ -645,7 +641,7 @@
     update();
   };
 
-  const get = (f) => fetch('data/' + f + '?v=20261024d').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=20261024e').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });

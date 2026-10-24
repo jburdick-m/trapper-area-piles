@@ -13,7 +13,7 @@ The page maps 210 piles 40 ft and wider: 205 from the first pass and 5 the autom
 | `data/piles.json` | One row per pile: project, unit, footprint, diameter, height, gross volume and 95% sampling interval, footprint outline. Rows with `added: true` (ids 1001+) come from the automated pass and carry a 90% volume range, pile probability, stability and pulse count |
 | `data/piles_30_40ft.json` | The 13 piles 30–40 ft the automated pass found, same fields. Not shown on the page: too incomplete to count yet |
 | `data/units.json` | Treatment units with acres and the share covered by the 2026 lidar |
-| `data/layers.json` | Project boundaries, lidar coverage, National Forest land, analysis extent |
+| `data/layers.json` | Project boundaries, Feb 2026 lidar footprint (from the ASO tiles: 25 m cells with at least 0.5 points per m², gaps up to 200 m filled), National Forest land, analysis extent |
 | `data/assumptions.json` | Slider defaults and ranges, with their sources |
 | `data/hillshade.jpg` | Hillshade background from USGS 3DEP, 25 m, covering all four projects |
 | `data/piles/pile_<id>.webp` | Lit 3-D view of each pile at true scale with a chip van and tractor beside it, shown when a pile is clicked |
