@@ -77,6 +77,8 @@
   .bp-sl output { font-variant-numeric: tabular-nums; color: var(--color-fg); text-align: right; }
   .bp-sl input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--color-fg); }
   .bp-sl select.bp-dest { grid-column: 1 / -1; width: 100%; font: inherit; }
+  .bp h3.bp-gh { display: flex; justify-content: space-between; align-items: baseline; gap: var(--ui-gap-sm); }
+  .bp h3.bp-gh span { font-variant-numeric: tabular-nums; }
   .bp-load { display: flex; flex-direction: column; gap: var(--ui-gap-xs); font-size: var(--ui-font-size-caption); margin-top: var(--ui-gap-xs); }
   .bp-load .lt { display: flex; justify-content: space-between; gap: var(--ui-gap-sm); }
   .bp-load .lt b { font-weight: var(--ui-font-weight-medium); font-variant-numeric: tabular-nums; }
@@ -252,6 +254,13 @@
       box.replaceChildren();
       const h = document.createElement('h3');
       h.textContent = title;
+      // running total for the two disposal methods, filled in update()
+      if (id === 'g-haul' || id === 'g-carb') {
+        h.className = 'bp-gh';
+        const tot = document.createElement('span');
+        tot.id = id + '-total';
+        h.append(tot);
+      }
       box.append(h);
       if (id === 'g-haul' && DATA.destinations && DATA.destinations.length) {
         // destination picker: sets the haul distance slider to that plant's routed road miles
@@ -586,6 +595,8 @@
     $('#k-days').textContent = fmt0(a.days) + ' days';
     $('#k-days-s').textContent = `${fmt1(a.seasons)} seasons · ${S.p.carb_units} machine${S.p.carb_units > 1 ? 's' : ''} · ${fmt0(a.runh)} run-h`;
     $('#k-ccost').textContent = money(a.ccost);
+    $('#g-haul-total').textContent = a.n ? money(a.gcost) : '—';
+    $('#g-carb-total').textContent = a.n ? money(a.ccost) : '—';
     $('#k-ccost-s').textContent = a.T ? `$${fmt0(a.ccost / a.T)} per dry ton all-in, incl. move-ins and fire support` : '';
     $('#k-gcost').textContent = money(a.gcost);
     $('#k-gcost-s').textContent = a.T ? `$${fmt0(a.gcost / a.T)} per dry ton all-in · ${fmt0(a.loads)} loads, ${S.p.haul_miles} mi · ~${fmt0(a.gdays)} working days (${fmt1(a.gdays / S.p.season_days)} seasons)` : '';
