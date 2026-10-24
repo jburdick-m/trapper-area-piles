@@ -4,13 +4,14 @@ Live site: https://jburdick-m.github.io/trapper-area-piles/
 
 Interactive map and disposal planner for the large burn piles left by fuels treatments in the Pike-Magnus, Graveyard, Sleighville and Alaska Peak units, Tahoe National Forest.
 
-The page maps 205 piles 40 ft and wider from the first pass, plus 18 found by a second, automated pass (13 at 30–40 ft, 5 at 40 ft and up that the first pass missed). Those 18 are drawn hollow and marked lower confidence. The size slider starts at 40 ft and goes down to 30 ft. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures add each project's unflown share of unit acres to its flown totals (flown × (1 + unflown fraction)), a simple allowance for piles outside the 2026 lidar.
+The page maps 210 piles 40 ft and wider: 205 from the first pass and 5 the automated pass below found that it missed. Sliders set packing ratio, wood density, grind-and-haul and carbonator rates, and the totals, project table and map update as they move. The "all project ground" figures add each project's unflown share of unit acres to its flown totals (flown × (1 + unflown fraction)), a simple allowance for piles outside the 2026 lidar.
 
 ## Data
 
 | File | Contents |
 | --- | --- |
 | `data/piles.json` | One row per pile: project, unit, footprint, diameter, height, gross volume and 95% sampling interval, footprint outline. Rows with `added: true` (ids 1001+) come from the automated pass and carry a 90% volume range, pile probability, stability and pulse count |
+| `data/piles_30_40ft.json` | The 13 piles 30–40 ft the automated pass found, same fields. Not shown on the page: too incomplete to count yet |
 | `data/units.json` | Treatment units with acres and the share covered by the 2026 lidar |
 | `data/layers.json` | Project boundaries, lidar coverage, National Forest land, analysis extent |
 | `data/assumptions.json` | Slider defaults and ranges, with their sources |
@@ -77,7 +78,7 @@ Validation on the test tiles: the cluster stage finds 146 of the 148 mapped pile
 - Only piles under the Feb 2026 flight are counted; ground without coverage is darkened and hatched on the map.
 - The largest mapped pile (Sleighville unit 265) looks like a landing pad rather than slash and may overstate tons.
 - Volumes carry a measured sampling error (median about ±7% for piles over 40 ft) plus unmeasured bias from rough pile tops, ground disturbance and the toe cutoff.
-- Piles 30–40 ft come only from the automated pass and are a partial count: at the pulse counts small piles get in this flight, the pass finds roughly 15–50% of piles, so the real number of 30–40 ft piles is likely several times the 13 shown. A denser flight would make them reliable.
+- Piles under 40 ft are not counted. The automated pass found 13 at 30–40 ft (`data/piles_30_40ft.json`), but at the pulse counts small piles get in this flight it finds roughly 15–50% of them, so the real number is likely several times that. Ground data or a denser flight would make them usable.
 
 ## Publish with GitHub Pages
 
