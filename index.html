@@ -501,8 +501,7 @@
     if (!d.sel) return;
     tipLines([`Pile ${d.id} · ${d.project}${d.unit ? ' unit ' + d.unit : ''}`,
       `${fmt0(d.diam)} ft across, ${fmt0(d.hmax)} ft tall`,
-      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`,
-      d.basis === 'open_2022' ? 'On ground open in 2022: check' : 'Canopy removed since 2022']);
+      `${fmt0(d.vol)} m³ gross (±${fmt0(d.ci)}% sampling, 95%) · ${fmt0(d.tons)} dry t · ${vanLoads(d)} chip-van loads`]);
     placeTip(ev);
   }
   function tipUnit(ev, u) {
