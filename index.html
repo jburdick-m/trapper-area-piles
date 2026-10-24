@@ -403,7 +403,7 @@
       .attr('d', (u) => ringsPath(u.g, px, py)).attr('fill-rule', 'evenodd')
       .attr('fill', 'var(--ui-chart-status-serious)').attr('fill-opacity', 0)
       .attr('stroke', (u) => colorOf[u.project]).attr('stroke-width', 0.7).attr('stroke-opacity', 0.9)
-      .on('mousemove', (ev, u) => tipUnit(ev, u)).on('mouseleave', hideTip);
+      .on('mousemove click', (ev, u) => tipUnit(ev, u)).on('mouseleave', hideTip);
     root.append('g').attr('class', 'lyr-proj').selectAll('path').data(L.filter((d) => d.kind === 'project')).join('path')
       .attr('d', (d) => ringsPath(d.g, px, py)).attr('fill', 'none').attr('stroke', (d) => colorOf[d.name]).attr('stroke-width', 2.4).style('pointer-events', 'none');
     root.append('g').attr('class', 'fp').selectAll('path').data(P, (d) => d.id).join('path')
@@ -494,9 +494,7 @@
     placeTip(ev);
   }
   function tipUnit(ev, u) {
-    tipLines([`${u.project}${u.unit && u.unit !== u.project ? ' unit ' + u.unit : ''}`,
-      `${fmt1(u.acres)} acres · ${fmt0(u.lidar)}% under Feb 2026 lidar`,
-      `${fmt0(u.inview)}% inside the analysis extent`]);
+    tipLines([u.unit && u.unit !== u.project ? `Unit ${u.unit}` : u.project, `${u.acres < 10 ? fmt1(u.acres) : fmt0(u.acres)} acres`]);
     placeTip(ev);
   }
   function hideTip() { tip.hidden = true; }
