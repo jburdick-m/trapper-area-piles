@@ -68,7 +68,7 @@
   "source": "Siskiyou 2020 demo: 46.7 t biochar from 373 BDT. Biochar sale value is not credited"},
 
  {"key": "fire_support", "label": "Fire support per working day", "default": 1200, "min": 0, "max": 4000, "step": 100, "unit": "$/day",
-  "source": "Assumed: water tender with operator ~$100-150/h for a 10 h shift, required on grinders and carbonators in fire season; one per carbonator"},
+  "source": "Assumed: contracted water tender with operator ~$100-150/h for a 10 h shift in fire season, one per carbonator. Not costed for grinding, where fire support is the Forest Service's own"},
  {"key": "season_days", "label": "Working days per season", "default": 120, "min": 40, "max": 200, "step": 5, "unit": "days",
   "source": "Assumed operating window per field season"}
 ]

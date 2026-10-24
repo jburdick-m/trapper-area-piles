@@ -236,8 +236,8 @@
     ['g-fuel', 'Fuel', ['diesel']],
     ['g-haul', 'Grind and haul', ['grind_cost', 'grind_rate', 'grind_hours', 'haul_miles', 'haul_speed', 'truck_rate',
                                   'load_bdt', 'trucks', 'markup', 'grind_mob', 'gate_price']],
-    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'biochar_yield']],
-    ['g-both', 'Both methods', ['fire_support', 'season_days']],
+    ['g-carb', 'Carbonator', ['carb_rate', 'carb_hours', 'carb_units', 'carb_cost', 'carb_mob', 'fire_support', 'biochar_yield']],
+    ['g-both', 'Both methods', ['season_days']],
   ];
   // dyed off-road diesel from the on-road pump price: take out the state excise (outside the sales tax
   // base), the on-road diesel sales tax and the federal excise, then add the lower off-road sales tax
@@ -367,7 +367,8 @@
     P.forEach((d) => { d.tons = d.vol * f * p.packing_ratio; d.sel = S.projects.has(d.project) && d.diam >= S.minDiam; });
     // Grind and haul: round trip = drive both ways + 1 h to load and unload; each truck makes as many
     // whole trips as fit in an 11 h driver day (at least one). Working days = the slower of the grinder
-    // and the trucks. Cost = (grind + haul) x markup - plant gate payment, + move-ins + fire support.
+    // and the trucks. Cost = (grind + haul) x markup - plant gate payment, + move-ins. Fire support on
+    // grinding is the Forest Service's own, so it is not costed; the carbonator carries its own.
     // Diesel: the default rates include fuel at diesel_ref; the diesel price moves only their fuel share.
     // Grinder, carbonator and their loaders (per productive or run-hour) burn dyed off-road diesel; chip
     // vans (per mile plus idling), fire support (per day) and lowboys (per move-in) pay the on-road price.
@@ -386,7 +387,7 @@
       const nproj = new Set(rows.map((d) => d.project)).size;
       const loads = T / p.load_bdt;
       const gdays = Math.max(T / (p.grind_rate * p.grind_hours), loads / (p.trucks * tripsPerTruckDay));
-      const gcost = T * ghPerTon + (rows.length ? (p.grind_mob + moveIn) * nproj : 0) + fireDay * gdays;
+      const gcost = T * ghPerTon + (rows.length ? (p.grind_mob + moveIn) * nproj : 0);
       const runh = T / p.carb_rate;
       const days = runh / p.carb_hours / p.carb_units;
       const ccost = runh * carbHour + (rows.length ? (p.carb_mob + moveIn) * p.carb_units * nproj : 0)
@@ -421,7 +422,7 @@
     const root = svg.append('g').attr('class', 'root');
     const hs = DATA.hillshade;
     if (hs) {
-      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024m').attr('x', px(hs.x0)).attr('y', py(hs.y1))
+      root.append('image').attr('class', 'lyr-hs').attr('href', hs.url + '?v=20261024n').attr('x', px(hs.x0)).attr('y', py(hs.y1))
         .attr('width', (hs.x1 - hs.x0) * s).attr('height', (hs.y1 - hs.y0) * s).attr('preserveAspectRatio', 'none').attr('opacity', 0.55);
     }
     const fs = L.find((d) => d.kind === 'fsland');
@@ -644,7 +645,7 @@
     const markup = (grind + haul) * p.markup / 100;
     const fixed = a.loads ? (a.gcost - a.T * sc.ghPerTon) / a.loads : 0;
     const gate = p.gate_price * p.load_bdt;             // > 0: plant pays (credit), < 0: tipping fee
-    const parts = [['Grind and load', grind], ['Haul', haul], ['Overhead and profit', markup], ['Move-ins and fire support', fixed]];
+    const parts = [['Grind and load', grind], ['Haul', haul], ['Overhead and profit', markup], ['Move-ins', fixed]];
     if (gate < 0) parts.push(['Tipping fee', -gate]);
     costBar('load-cost', 'Cost per chip-van load', parts, a.loads > 0, Math.max(gate, 0), 'Less plant payment');
     const run = sc.carbHour * p.carb_hours * p.carb_units;
@@ -728,7 +729,7 @@
     }
   };
 
-  const get = (f) => fetch('data/' + f + '?v=20261024m').then((r) => {
+  const get = (f) => fetch('data/' + f + '?v=20261024n').then((r) => {
     if (!r.ok) throw new Error(f + ': ' + r.status);
     return r.json();
   });
