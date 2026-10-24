@@ -280,11 +280,7 @@ def render_one(pile, tile_dir, out_dir):
     ax.tick_params(labelsize=8, pad=1)
     zt_ticks = [t for t in (0, 2, 5, 10, 15, 20, 30) if t <= zt]
     ax.set_zticks(zt_ticks)
-    unit = f" unit {pile['unit']}" if pile.get('unit') and pile['unit'] != pile['project'] else ''
-    fig.suptitle(f"Pile {pid} · {pile['project']}{unit}", fontsize=13, y=0.97)
-    fig.text(0.5, 0.915, f"{pile['diam_ft']:.0f} ft across, {pile['hmax_ft']:.0f} ft tall, "
-             f"{pile['vol_m3']:,.0f} m³ gross · lit 3-D surface, true scale", ha='center', fontsize=9.5, color='#555')
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=0.95)
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
     png = os.path.join(out_dir, f'pile_{pid}.png')
     fig.savefig(png, facecolor='white')
     plt.close(fig)
